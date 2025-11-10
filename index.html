@@ -924,28 +924,27 @@ $('gaSkip').addEventListener('click', ()=>{
 
 function tagGACause(gaEv){
   const tGA = new Date(gaEv.tISO).getTime();
-  const lookback = tGA - 10000;
-  const recent = state.events.filter(ev=>{
-    if(ev.id === gaEv.id) return false;
+  const lookback = tGA - 10000; // 10s window
+
+  let hasBA = false;
+  let hasDZ = false;
+  let hasBR = false;
+
+  for (const ev of state.events){
     const t = new Date(ev.tISO).getTime();
-    return t>=lookback && t<=tGA &&
-      (ev.type==='breakaway_against' || ev.type==='dz_turnover' || ev.type==='bad_rebound');
-  });
+    if (t < lookback || t > tGA) continue;
 
-  const hasBA = recent.some(ev=>ev.type==='breakaway_against');
-  const hasDZ = recent.some(ev=>ev.type==='dz_turnover');
-  const hasBR = recent.some(ev=>ev.type==='bad_rebound');
+    if (ev.type === 'breakaway_against') hasBA = true;
+    if (ev.type === 'dz_turnover') hasDZ = true;
+    if (ev.type === 'bad_rebound') hasBR = true;
+  }
 
-  gaEv.ga_ba = !!hasBA;
-  gaEv.ga_dz = !!hasDZ;
-  gaEv.ga_br = !!hasBR;
+  const parts = [];
+  if (hasBA) parts.push('BA');
+  if (hasDZ) parts.push('DZ');
+  if (hasBR) parts.push('BR');
 
-  // Preserve single-cause field for summaries/CSV (priority order)
-  if(hasBA) gaEv.ga_cause = 'BA';
-  else if(hasDZ) gaEv.ga_cause = 'DZ';
-  else if(hasBR) gaEv.ga_cause = 'BR';
-  else gaEv.ga_cause = 'other';
-
+  gaEv.ga_cause = parts.length ? parts.join('+') : 'other';
   save();
 }
 
