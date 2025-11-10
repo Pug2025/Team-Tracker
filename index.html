@@ -67,21 +67,24 @@
   .btn.team:active,.btn.roster:active{transform:scale(.97)}
 
   /* Live floating scoreboard */
-  .livebar{
-    position:sticky;
-    top:0;
-    z-index:999;
-    margin:2px 0 4px;
-    padding:8px 10px;
-    border-radius:10px;
-    background:#101520;
-    border:1px solid #233044;
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-    backdrop-filter:blur(6px);
-  }
-
+.livebar{
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 28px); /* matches wrap padding, keeps it aligned */
+  max-width: 520px;
+  z-index: 999;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background:#101520;
+  border:1px solid #233044;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  backdrop-filter:blur(6px);
+}
   /* Mobile / narrow screens: force fixed bar to dodge iOS sticky quirks */
 @media (max-width: 768px) {
   .livebar{
