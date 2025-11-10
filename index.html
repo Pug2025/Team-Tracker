@@ -81,6 +81,21 @@
     gap:2px;
     backdrop-filter:blur(6px);
   }
+
+  /* Mobile / narrow screens: force fixed bar to dodge iOS sticky quirks */
+@media (max-width: 768px) {
+  .livebar{
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 520px;
+    margin: 0;
+  }
+  .wrap{
+    padding-top: 72px; /* approx livebar height so content isn't hidden */
+  }
+}
   .livebar-main{
     display:flex;
     justify-content:space-between;
