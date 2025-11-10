@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.5.0)</title>
+<title>Team Tracker – iPhone (v3.6.0)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -67,55 +67,40 @@
   .btn.team:active,.btn.roster:active{transform:scale(.97)}
 
   /* Live floating scoreboard */
-.livebar{
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 28px); /* matches wrap padding, keeps it aligned */
-  max-width: 520px;
-  z-index: 999;
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background:#101520;
-  border:1px solid #233044;
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-  backdrop-filter:blur(6px);
-}
-
-/* Mobile: make scoreboard a full-width top banner */
-@media (max-width: 768px) {
   .livebar{
-    left: 0;
-    transform: none;
-    width: 100%;
-    max-width: none;
-    border-radius: 0 0 10px 10px; /* banner style: flat on top, rounded bottom */
-    margin: 0;
+    position:fixed;
+    top:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:calc(100% - 28px);
+    max-width:520px;
+    z-index:999;
+    margin:0;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#101520;
+    border:1px solid #233044;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    backdrop-filter:blur(6px);
   }
 
-  .wrap{
-    padding-top: 80px; /* ensures content starts below fixed banner */
+  /* Mobile: full-width top banner */
+  @media (max-width: 768px) {
+    .livebar{
+      left:0;
+      transform:none;
+      width:100%;
+      max-width:none;
+      border-radius:0 0 10px 10px;
+      margin:0;
+    }
+    .wrap{
+      padding-top:80px; /* ensure content starts below banner */
+    }
   }
-}
-  
-  /* Mobile / narrow screens: force fixed bar to dodge iOS sticky quirks */
-@media (max-width: 768px) {
-  .livebar{
-    position: fixed;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: 520px;
-    margin: 0;
-  }
-  .wrap{
-    padding-top: 72px; /* approx livebar height so content isn't hidden */
-  }
-}
+
   .livebar-main{
     display:flex;
     justify-content:space-between;
@@ -306,7 +291,7 @@
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.5.0</div>
+      <div class="tag" id="gameMetaTag">New game • v3.6.0</div>
     </div>
   </header>
 
@@ -384,7 +369,7 @@
       <button class="btn period" id="btnNextPeriod" type="button">Next Period</button>
     </div>
 
-    <!-- Stats (no GF/GA/SF/SA boxes; those live in the floating bar) -->
+    <!-- Stats (no GF/GA/SF/SA here; in floating bar) -->
     <div class="stats" id="stats">
       <div class="card"><h3>Saves</h3><div class="val" id="savesVal">0</div></div>
       <div class="card"><h3>Save %</h3><div class="val" id="svVal">—</div></div>
@@ -548,7 +533,7 @@
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3500'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3600'));
 }
 
 /* ===== IndexedDB KV helper ===== */
@@ -670,7 +655,6 @@ function bump(type, period){
   }else if(type==='smother'){
     state.countsA.smothers++; p.A_smothers++;
   }else if(type==='bad_rebound'){
-    // Feedback: bad rebound should also count a shot against
     state.countsA.shots++; state.countsA.badRebounds++;
     p.A_shots++; p.A_badRebounds++;
   }else if(type==='big_save'){
@@ -687,6 +671,46 @@ function bump(type, period){
     state.team.dzTurnovers++; p.DZ++;
   }
 }
+
+/* Rebuild all tallies from events (used on init & precise restores) */
+function rebuildFromEvents(){
+  per = {1:initP(),2:initP(),3:initP(),4:initP()};
+  state.countsA = {shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0};
+  state.countsF = {shots:0, goals:0};
+  state.team = {breakawaysAgainst:0, dzTurnovers:0};
+  for(const ev of state.events){
+    bump(ev.type, ev.period);
+  }
+}
+
+/* ===== Good Rebound auto-credit ===== */
+const pendingGood = new Map();
+function scheduleGoodReboundCredit(id){
+  if(pendingGood.has(id)) clearTimeout(pendingGood.get(id));
+  const to = setTimeout(()=>{
+    const ev = state.events.find(e=>e.id===id);
+    if(ev && !ev.goodRebound){
+      ev.goodRebound = true;
+      save();
+    }
+    pendingGood.delete(id);
+  }, 4000);
+  pendingGood.set(id, to);
+}
+function cancelRecentGoodCredit(){
+  const ids = [...pendingGood.keys()];
+  if(!ids.length) return;
+  const lastId = ids[ids.length-1];
+  clearTimeout(pendingGood.get(lastId));
+  pendingGood.delete(lastId);
+}
+function clearGoodPendingFor(id){
+  if(!pendingGood.has(id)) return;
+  clearTimeout(pendingGood.get(id));
+  pendingGood.delete(id);
+}
+
+/* ===== Add / Undo ===== */
 function addEvent(type, meta={}){
   const ev = {
     id: ++state.lastEventId,
@@ -699,9 +723,8 @@ function addEvent(type, meta={}){
   state.events.push(ev);
   bump(type, state.period);
 
-  // For goals against, tag cause BEFORE first render
   if (type === 'goal' || type === 'soft_goal') {
-    tagGACause(ev);
+    tagGACause(ev); // tag cause before render
   }
 
   save();
@@ -725,6 +748,8 @@ function undo(){
   vibrate(15);
 }
 function revert(ev){
+  clearGoodPendingFor(ev.id);
+
   const p = per[ev.period] || per[4];
   if(ev.type==='shot'){
     state.countsA.shots--; p.A_shots--;
@@ -755,13 +780,12 @@ function revert(ev){
   save();
 }
 
-/* ===== Undo interactions (pointer-safe, single fire) ===== */
+/* ===== Undo interactions (pointer-safe) ===== */
 let undoHoldTimer = null;
 let undoHeld = false;
 let undoPointerActive = false;
 
-function startUndoHold(e){
-  // Ensure we only track one pointer sequence
+function startUndoHold(){
   if (undoPointerActive) return;
   undoPointerActive = true;
   undoHeld = false;
@@ -771,8 +795,7 @@ function startUndoHold(e){
     showUndoModal();
   }, 600);
 }
-
-function finishUndo(e){
+function finishUndo(){
   if (!undoPointerActive) return;
   undoPointerActive = false;
 
@@ -780,13 +803,10 @@ function finishUndo(e){
     clearTimeout(undoHoldTimer);
     undoHoldTimer = null;
   }
-
-  // If hold did NOT complete → simple tap → undo last event
   if (!undoHeld){
     undo();
   }
 }
-
 function cancelUndoHold(){
   if (!undoPointerActive) return;
   undoPointerActive = false;
@@ -797,31 +817,29 @@ function cancelUndoHold(){
   }
 }
 
-// Use pointer events so we don't double-trigger on touch+mouse
 const undoBtn = $('btnUndo');
 undoBtn.addEventListener('pointerdown', startUndoHold);
 undoBtn.addEventListener('pointerup', finishUndo);
 undoBtn.addEventListener('pointerleave', cancelUndoHold);
 undoBtn.addEventListener('pointercancel', cancelUndoHold);
 
-  /* ===== Undo modal & toast ===== */
+/* ===== Undo modal & toast ===== */
 let lastRemoved = null;
 
 function showUndoModal(){
   const listEl = $('undoList');
-  const recent = state.events.slice(-5); // last 5 in order
+  const recent = state.events.slice(-5);
   if (!recent.length){
     listEl.innerHTML = `<div class="small">No events to remove.</div>`;
   } else {
     listEl.innerHTML = recent
       .map(ev => {
         const label = labelFor(ev);
-        return `
-          <div class="undoRow" data-id="${ev.id}">
-            P${ev.period} • ${fmtTime(ev.tISO)} — ${label}
-          </div>`;
+        return `<div class="undoRow" data-id="${ev.id}">
+          P${ev.period} • ${fmtTime(ev.tISO)} — ${label}
+        </div>`;
       })
-      .reverse() // show newest at top
+      .reverse()
       .join('');
   }
   $('undoModal').style.display = 'flex';
@@ -835,24 +853,23 @@ $('undoList').addEventListener('click', e => {
   if (idx === -1) return;
 
   const [ev] = state.events.splice(idx, 1);
-  revert(ev); // adjusts counts + per-period + saves
+  revert(ev);
   lastRemoved = ev;
 
   $('undoModal').style.display = 'none';
-  showToast('Removed.'); // simple toast with restore option
+  showToast('Removed.');
+  renderAll();
 });
 
 $('undoClose').addEventListener('click', () => {
   $('undoModal').style.display = 'none';
 });
 
-/* Toast helpers (for undo restore) */
 function showToast(msg){
   const t = $('toast');
   t.firstChild.nodeValue = msg + ' ';
   t.style.display = 'block';
 }
-
 function hideToast(){
   $('toast').style.display = 'none';
 }
@@ -862,14 +879,13 @@ $('toastRestore').addEventListener('click', () => {
     hideToast();
     return;
   }
-  // Reapply event
   const ev = lastRemoved;
   lastRemoved = null;
 
-  // make sure it's appended in chronological/event order
+  // Restore into correct chronological position
   state.events.push(ev);
-  bump(ev.type, ev.period);
-
+  state.events.sort((a,b)=>new Date(a.tISO) - new Date(b.tISO));
+  rebuildFromEvents();
   save();
   renderAll();
   hideToast();
@@ -877,7 +893,6 @@ $('toastRestore').addEventListener('click', () => {
 
 /* ===== Labels ===== */
 function labelFor(ev){
-  // Base label
   let label = ev.type
     .replace('soft_goal','Soft Goal')
     .replace('bad_rebound','Bad Rebound')
@@ -887,73 +902,57 @@ function labelFor(ev){
     .replace('dz_turnover','D-Zone Turnover')
     .replace(/_/g,' ');
 
-  // Our shots / goals: player + assist + on-ice
+  // Our shots / goals: player
   if ((ev.type === 'for_shot' || ev.type === 'for_goal') && ev.player){
-    label += ` (#${ev.player})`;
+    if (ev.player !== 'Unknown' && ev.player !== '?') {
+      label += ` (#${ev.player})`;
+    }
   }
 
+  // Assist
   if (ev.type === 'for_goal' && ev.assist){
-    label += ` A:${ev.assist === 'None' ? '—' : ('#' + ev.assist)}`;
+    if (ev.assist === 'None' || ev.assist === 'Unknown'){
+      label += ' A:—';
+    } else {
+      label += ` A:#${ev.assist}`;
+    }
   }
 
+  // For-goal on-ice
   if (ev.type === 'for_goal' && Array.isArray(ev.forOnIce) && ev.forOnIce.length){
     label += ` [For on-ice: ${compressUnknown(ev.forOnIce).join(', ')}]`;
   }
 
-  // Goals against: on-ice
+  // GA on-ice
   if ((ev.type === 'goal' || ev.type === 'soft_goal') &&
       Array.isArray(ev.onIce) && ev.onIce.length){
     label += ` [On-ice: ${compressUnknown(ev.onIce).join(', ')}]`;
   }
 
-  // Strength tags for any goal (omit EV)
+  // Strength tag (omit EV)
   if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
       ev.strength && ev.strength !== 'EV') {
     label += ` [${ev.strength}]`;
   }
 
-  // GA context: Screen, Deflection, Rush, Rebound, etc.
+  // GA context
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_ctx){
     label += ` {${ev.ga_ctx}}`;
   }
 
-  // GA cause(s): Breakaway / Turnover / Bad Rebound based on ga_cause
+  // GA cause(s)
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_cause){
     const parts = String(ev.ga_cause).split('+');
     const causes = [];
     if (parts.includes('BA')) causes.push('Breakaway');
     if (parts.includes('DZ')) causes.push('Turnover');
     if (parts.includes('BR')) causes.push('Bad Rebound');
-
     if (causes.length){
-      // Example: <Breakaway>, <Turnover/Bad Rebound>
       label += ` <${causes.join('/')}>`;
     }
   }
 
   return label;
-}
-  
-/* ===== Good Rebound auto-credit ===== */
-const pendingGood = new Map();
-function scheduleGoodReboundCredit(id){
-  if(pendingGood.has(id)) clearTimeout(pendingGood.get(id));
-  const to = setTimeout(()=>{
-    const ev = state.events.find(e=>e.id===id);
-    if(ev && !ev.goodRebound){
-      ev.goodRebound = true;
-      save();
-    }
-    pendingGood.delete(id);
-  }, 4000);
-  pendingGood.set(id, to);
-}
-function cancelRecentGoodCredit(){
-  const ids = [...pendingGood.keys()];
-  if(!ids.length) return;
-  const lastId = ids[ids.length-1];
-  clearTimeout(pendingGood.get(lastId));
-  pendingGood.delete(lastId);
 }
 
 /* ===== GA context & cause flags ===== */
@@ -970,10 +969,7 @@ $('gaGrid').addEventListener('click', e=>{
   lastGAEvent.ga_ctx = chip.dataset.t;
   save();
   $('gaOverlay').style.display = 'none';
-
-  // Immediately reflect context in the log
   renderAll();
-
   openMultiPicker({
     title: 'Select FIVE players on ice (GA)',
     max: 5,
@@ -981,7 +977,6 @@ $('gaGrid').addEventListener('click', e=>{
     field: 'onIce',
     exclude: []
   });
-
   lastGAEvent = null;
 });
 $('gaSkip').addEventListener('click', ()=>{
@@ -1000,7 +995,7 @@ $('gaSkip').addEventListener('click', ()=>{
 
 function tagGACause(gaEv){
   const tGA = new Date(gaEv.tISO).getTime();
-  const lookback = tGA - 10000; // 10s window
+  const lookback = tGA - 10000;
 
   let hasBA = false;
   let hasDZ = false;
@@ -1009,7 +1004,6 @@ function tagGACause(gaEv){
   for (const ev of state.events){
     const t = new Date(ev.tISO).getTime();
     if (t < lookback || t > tGA) continue;
-
     if (ev.type === 'breakaway_against') hasBA = true;
     if (ev.type === 'dz_turnover') hasDZ = true;
     if (ev.type === 'bad_rebound') hasBR = true;
@@ -1111,11 +1105,8 @@ $('onIceUse').addEventListener('click', ()=>{
   save();
   $('onIceModal').style.display = 'none';
   multiPick.eventRef = null;
-
-  // Reflect on-ice info immediately in the log/summary
   renderAll();
 
-  // After on-ice selection, offer PP/SH/EV tagging for goals
   if (ev.type === 'goal' || ev.type === 'soft_goal') {
     openStrengthPicker(ev, 'Goal Against — PP/SH (optional)');
   } else if (ev.type === 'for_goal') {
@@ -1212,7 +1203,7 @@ function perPlayerTallies(){
   return {shots, goals, assists, order};
 }
 
-/* ===== Scoring (unchanged) ===== */
+/* ===== Scoring ===== */
 function computeGoalieScore(){
   const C = state.countsA;
   const shots = C.shots, ga = C.goals, saves = Math.max(0, shots - ga);
@@ -1286,7 +1277,7 @@ function shotShare(){
 /* ===== Render ===== */
 function updateMeta(){
   $('gameMetaTag').textContent =
-    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.5.0`;
+    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.6.0`;
 }
 function refreshStats(){
   const A = state.countsA, F = state.countsF, T = state.team;
@@ -1304,7 +1295,6 @@ function refreshStats(){
   $('dzVal').textContent      = T.dzTurnovers||0;
   $('teamScoreVal').textContent = Team.total;
 
-  // Period summary
   const phtml = [1,2,3,4].map(p=>{
     const v = per[p];
     const saves = Math.max(0, v.A_shots - v.A_goals);
@@ -1318,7 +1308,6 @@ function refreshStats(){
   }).join('');
   $('periodSummary').innerHTML = phtml;
 
-  // Goalie & team score coloring
   const gsEl = $('goalieScoreNum'), tsEl = $('teamScoreNum');
   if(gsEl && tsEl){
     gsEl.textContent = K.total;
@@ -1328,7 +1317,6 @@ function refreshStats(){
     tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'bad');
   }
 
-  // Floating scoreboard
   $('liveGF').textContent = F.goals;
   $('liveGA').textContent = A.goals;
   $('liveSF').textContent = F.shots;
@@ -1340,6 +1328,14 @@ function refreshLog(){
     .join('');
   $('log').scrollTop = $('log').scrollHeight;
 }
+function renderAll(){
+  highlightPeriod();
+  updateMeta();
+  refreshStats();
+  refreshLog();
+}
+
+/* ===== Summary builders ===== */
 function makeSummaryTable(){
   const rows = [];
   const header = `<table><thead><tr>
@@ -1413,7 +1409,6 @@ function buildGASummary(){
     const rawSt = ev.strength || 'EV';
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
 
-// derive flags (support older + combo ga_cause values)
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
     const ba = ev.ga_ba || cause.includes('BA');
     const dz = ev.ga_dz || cause.includes('DZ');
@@ -1444,46 +1439,37 @@ function buildGASummary(){
       </table>
     </div>`;
 }
-function renderAll(){
-  highlightPeriod();
-  updateMeta();
-  refreshStats();
-  refreshLog();
-}
-
-/* ===== Readable narrative summary ===== */
 function buildReadableSummary(){
   const K = computeGoalieScore(), T = computeTeamScore();
   const F = state.countsF, A = state.countsA;
   const date = state.date || new Date().toISOString().slice(0,10);
   const opponent = state.opponent || 'Unknown opponent';
   const level = state.level || 'U11';
-const gaBA = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  return e.ga_ba || cause.includes('BA');
-}).length;
 
-const gaDZ = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  return e.ga_dz || cause.includes('DZ');
-}).length;
+  const gaBA = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_ba || cause.includes('BA');
+  }).length;
+  const gaDZ = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_dz || cause.includes('DZ');
+  }).length;
+  const gaBR = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_br || cause.includes('BR');
+  }).length;
+  const gaOther = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    const taggedBA = e.ga_ba || cause.includes('BA');
+    const taggedDZ = e.ga_dz || cause.includes('DZ');
+    const taggedBR = e.ga_br || cause.includes('BR');
+    return !taggedBA && !taggedDZ && !taggedBR;
+  }).length;
 
-const gaBR = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  return e.ga_br || cause.includes('BR');
-}).length;
-
-const gaOther = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  const taggedBA = e.ga_ba || cause.includes('BA');
-  const taggedDZ = e.ga_dz || cause.includes('DZ');
-  const taggedBR = e.ga_br || cause.includes('BR');
-  return !taggedBA && !taggedDZ && !taggedBR;
-}).length;
   const ourShPct = F.shots? ((F.goals/F.shots).toFixed(3).slice(1)) : '.000';
   const svPct = A.shots? ((Math.max(0,A.shots-A.goals)/A.shots).toFixed(3).slice(1)) : '.000';
 
@@ -1509,8 +1495,6 @@ const gaOther = state.events.filter(e=>{
     </div>
   `;
 }
-
-/* ===== Team breakdown text ===== */
 function buildTeamBreakdown(){
   const T = computeTeamScore();
   const parts = [
@@ -1557,32 +1541,31 @@ function safeName(s){
 }
 function buildGameRow(K, Team){
   const F=state.countsF, A=state.countsA;
-const gaBA = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  return e.ga_ba || cause.includes('BA');
-}).length;
 
-const gaDZ = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  return e.ga_dz || cause.includes('DZ');
-}).length;
+  const gaBA = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_ba || cause.includes('BA');
+  }).length;
+  const gaDZ = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_dz || cause.includes('DZ');
+  }).length;
+  const gaBR = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_br || cause.includes('BR');
+  }).length;
+  const gaOther = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    const taggedBA = e.ga_ba || cause.includes('BA');
+    const taggedDZ = e.ga_dz || cause.includes('DZ');
+    const taggedBR = e.ga_br || cause.includes('BR');
+    return !taggedBA && !taggedDZ && !taggedBR;
+  }).length;
 
-const gaBR = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  return e.ga_br || cause.includes('BR');
-}).length;
-
-const gaOther = state.events.filter(e=>{
-  if (e.type!=='goal' && e.type!=='soft_goal') return false;
-  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-  const taggedBA = e.ga_ba || cause.includes('BA');
-  const taggedDZ = e.ga_dz || cause.includes('DZ');
-  const taggedBR = e.ga_br || cause.includes('BR');
-  return !taggedBA && !taggedDZ && !taggedBR;
-}).length;
   return {
     date: state.date || new Date().toISOString().slice(0,10),
     opponent: state.opponent||'',
@@ -1603,7 +1586,6 @@ function rowToCSV(row, header){
   return header.map(k=>typeof row[k]==='string'?JSON.stringify(row[k]):row[k]).join(',');
 }
 function seasonCSV(rows){
-  // Used purely as a helper for single-game export now
   const header=[
     "date","opponent","level","teamScore","goalieScore",
     "SF","SA","GF","GA","ourShootingPct","savePct",
@@ -1669,7 +1651,6 @@ $('btnCopySelect').addEventListener('click', ()=>{
 });
 $('btnCopyClose').addEventListener('click', closeCopyModal);
 
-/* Build text summary for copy */
 function buildSummaryText(){
   const tmp = document.createElement('div');
   tmp.innerHTML = buildReadableSummary();
@@ -1839,7 +1820,6 @@ $('btnNextPeriod').addEventListener('click', async ()=>{
 });
 $('btnEnd').addEventListener('click', endGame);
 
-/* New Game */
 $('btnReset').addEventListener('click', ()=>{
   if(!confirm('Start a new game? This clears the current game log.')) return;
   $('summaryPanel').classList.add('hidden');
@@ -1877,7 +1857,6 @@ $('btnReset').addEventListener('click', ()=>{
   window.scrollTo({top:0,behavior:'smooth'});
 });
 
-/* Export Game CSV */
 $('btnExportGameCSV').addEventListener('click', ()=>{
   const csv = gameCSV();
   const date = state.date || new Date().toISOString().slice(0,10);
@@ -1885,7 +1864,6 @@ $('btnExportGameCSV').addEventListener('click', ()=>{
   shareCSV(csv, fn);
 });
 
-/* Copy Summary */
 $('btnCopySummary').addEventListener('click', ()=>{
   if(!$('summaryReadable').innerHTML.trim()){
     $('summaryReadable').innerHTML = buildReadableSummary();
@@ -1964,14 +1942,9 @@ setInterval(save, 4000);
   const loaded = await load();
   if (loaded && Array.isArray(loaded.events)){
     Object.assign(state, loaded);
-    // Rebuild per-period from events to avoid drift
-    per = {1:initP(),2:initP(),3:initP(),4:initP()};
-    state.countsA={shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0};
-    state.countsF={shots:0, goals:0};
-    state.team={breakawaysAgainst:0, dzTurnovers:0};
-    for(const ev of state.events){
-      bump(ev.type, ev.period);
-    }
+    state.events = Array.isArray(state.events) ? state.events : [];
+    state.events.sort((a,b)=>new Date(a.tISO) - new Date(b.tISO));
+    rebuildFromEvents();
     $('resumeBanner').classList.remove('hidden');
   }
   updateMeta();
