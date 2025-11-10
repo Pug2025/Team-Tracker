@@ -1,12 +1,21 @@
 {
   "name": "Team Tracker",
-  "short_name": "Team Tracker",
-  "start_url": "./?v=3500",
+  "short_name": "TeamTracker",
+  "description": "Lightweight goalie & team tracking for rinkside use.",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b0e11",
   "theme_color": "#0b0e11",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
