@@ -804,6 +804,77 @@ undoBtn.addEventListener('pointerup', finishUndo);
 undoBtn.addEventListener('pointerleave', cancelUndoHold);
 undoBtn.addEventListener('pointercancel', cancelUndoHold);
 
+  /* ===== Undo modal & toast ===== */
+let lastRemoved = null;
+
+function showUndoModal(){
+  const listEl = $('undoList');
+  const recent = state.events.slice(-5); // last 5 in order
+  if (!recent.length){
+    listEl.innerHTML = `<div class="small">No events to remove.</div>`;
+  } else {
+    listEl.innerHTML = recent
+      .map(ev => {
+        const label = labelFor(ev);
+        return `
+          <div class="undoRow" data-id="${ev.id}">
+            P${ev.period} • ${fmtTime(ev.tISO)} — ${label}
+          </div>`;
+      })
+      .reverse() // show newest at top
+      .join('');
+  }
+  $('undoModal').style.display = 'flex';
+}
+
+$('undoList').addEventListener('click', e => {
+  const row = e.target.closest('.undoRow');
+  if (!row) return;
+  const id = Number(row.dataset.id);
+  const idx = state.events.findIndex(ev => ev.id === id);
+  if (idx === -1) return;
+
+  const [ev] = state.events.splice(idx, 1);
+  revert(ev); // adjusts counts + per-period + saves
+  lastRemoved = ev;
+
+  $('undoModal').style.display = 'none';
+  showToast('Removed.'); // simple toast with restore option
+});
+
+$('undoClose').addEventListener('click', () => {
+  $('undoModal').style.display = 'none';
+});
+
+/* Toast helpers (for undo restore) */
+function showToast(msg){
+  const t = $('toast');
+  t.firstChild.nodeValue = msg + ' ';
+  t.style.display = 'block';
+}
+
+function hideToast(){
+  $('toast').style.display = 'none';
+}
+
+$('toastRestore').addEventListener('click', () => {
+  if (!lastRemoved) {
+    hideToast();
+    return;
+  }
+  // Reapply event
+  const ev = lastRemoved;
+  lastRemoved = null;
+
+  // make sure it's appended in chronological/event order
+  state.events.push(ev);
+  bump(ev.type, ev.period);
+
+  save();
+  renderAll();
+  hideToast();
+});
+
 /* ===== Labels ===== */
 function labelFor(ev){
   // Base label
@@ -1343,10 +1414,10 @@ function buildGASummary(){
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
 
 // derive flags (support older + combo ga_cause values)
-const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
-const ba = ev.ga_ba || cause.includes('BA');
-const dz = ev.ga_dz || cause.includes('DZ');
-const br = ev.ga_br || cause.includes('BR');
+    const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
+    const ba = ev.ga_ba || cause.includes('BA');
+    const dz = ev.ga_dz || cause.includes('DZ');
+    const br = ev.ga_br || cause.includes('BR');
 
     return `<tr>
       <td>${idx+1}</td>
