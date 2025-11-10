@@ -1342,10 +1342,11 @@ function buildGASummary(){
     const rawSt = ev.strength || 'EV';
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
 
-    // derive flags (support older records using ga_cause)
-    const ba = ev.ga_ba || ev.ga_cause === 'BA';
-    const dz = ev.ga_dz || ev.ga_cause === 'DZ';
-    const br = ev.ga_br || ev.ga_cause === 'BR';
+// derive flags (support older + combo ga_cause values)
+const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
+const ba = ev.ga_ba || cause.includes('BA');
+const dz = ev.ga_dz || cause.includes('DZ');
+const br = ev.ga_br || cause.includes('BR');
 
     return `<tr>
       <td>${idx+1}</td>
@@ -1386,14 +1387,32 @@ function buildReadableSummary(){
   const date = state.date || new Date().toISOString().slice(0,10);
   const opponent = state.opponent || 'Unknown opponent';
   const level = state.level || 'U11';
-  const gaBA = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') && (e.ga_ba || e.ga_cause==='BA')).length;
-  const gaDZ = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') && (e.ga_dz || e.ga_cause==='DZ')).length;
-  const gaBR = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') && (e.ga_br || e.ga_cause==='BR')).length;
-  const gaOther = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') &&
-    !(
-      e.ga_ba || e.ga_dz || e.ga_br ||
-      e.ga_cause === 'BA' || e.ga_cause === 'DZ' || e.ga_cause === 'BR'
-    )).length;
+const gaBA = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  return e.ga_ba || cause.includes('BA');
+}).length;
+
+const gaDZ = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  return e.ga_dz || cause.includes('DZ');
+}).length;
+
+const gaBR = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  return e.ga_br || cause.includes('BR');
+}).length;
+
+const gaOther = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  const taggedBA = e.ga_ba || cause.includes('BA');
+  const taggedDZ = e.ga_dz || cause.includes('DZ');
+  const taggedBR = e.ga_br || cause.includes('BR');
+  return !taggedBA && !taggedDZ && !taggedBR;
+}).length;
   const ourShPct = F.shots? ((F.goals/F.shots).toFixed(3).slice(1)) : '.000';
   const svPct = A.shots? ((Math.max(0,A.shots-A.goals)/A.shots).toFixed(3).slice(1)) : '.000';
 
@@ -1467,14 +1486,32 @@ function safeName(s){
 }
 function buildGameRow(K, Team){
   const F=state.countsF, A=state.countsA;
-  const gaBA = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') && (e.ga_ba || e.ga_cause==='BA')).length;
-  const gaDZ = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') && (e.ga_dz || e.ga_cause==='DZ')).length;
-  const gaBR = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') && (e.ga_br || e.ga_cause==='BR')).length;
-  const gaOther = state.events.filter(e=>(e.type==='goal'||e.type==='soft_goal') &&
-    !(
-      e.ga_ba || e.ga_dz || e.ga_br ||
-      e.ga_cause === 'BA' || e.ga_cause === 'DZ' || e.ga_cause === 'BR'
-    )).length;
+const gaBA = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  return e.ga_ba || cause.includes('BA');
+}).length;
+
+const gaDZ = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  return e.ga_dz || cause.includes('DZ');
+}).length;
+
+const gaBR = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  return e.ga_br || cause.includes('BR');
+}).length;
+
+const gaOther = state.events.filter(e=>{
+  if (e.type!=='goal' && e.type!=='soft_goal') return false;
+  const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+  const taggedBA = e.ga_ba || cause.includes('BA');
+  const taggedDZ = e.ga_dz || cause.includes('DZ');
+  const taggedBR = e.ga_br || cause.includes('BR');
+  return !taggedBA && !taggedDZ && !taggedBR;
+}).length;
   return {
     date: state.date || new Date().toISOString().slice(0,10),
     opponent: state.opponent||'',
