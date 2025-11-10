@@ -1,18 +1,16 @@
-// Team Tracker — Offline Service Worker (v3.5.0)
-const CACHE = 'team-tracker-v3500';
+// service-worker.js - Team Tracker v3.6.0
+
+const CACHE_NAME = 'team-tracker-cache-v3.6.0';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -20,23 +18,27 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k !== CACHE)
-          .map(k => caches.delete(k))
+          .filter(key => key.startsWith('team-tracker-cache-') && key !== CACHE_NAME)
+          .map(key => caches.delete(key))
       )
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
+  const { request } = event;
+  if (request.method !== 'GET') return;
 
-  const url = new URL(req.url);
-
-  if (url.origin === location.origin) {
-    event.respondWith(
-      caches.match(req).then(cached => cached || fetch(req))
-    );
-  }
+  event.respondWith(
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+      return fetch(request).then(resp => {
+        const copy = resp.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(request, copy);
+        });
+        return resp;
+      }).catch(() => cached || Promise.reject());
+    })
+  );
 });
