@@ -799,7 +799,7 @@ undoBtn.addEventListener('pointercancel', cancelUndoHold);
 
 /* ===== Labels ===== */
 function labelFor(ev){
-  // Base label by event type
+  // Base label
   let label = ev.type
     .replace('soft_goal','Soft Goal')
     .replace('bad_rebound','Bad Rebound')
@@ -809,53 +809,46 @@ function labelFor(ev){
     .replace('dz_turnover','D-Zone Turnover')
     .replace(/_/g,' ');
 
-  // Shooter info (our shot / our goal)
+  // Our shots / goals: player + assist + on-ice
   if ((ev.type === 'for_shot' || ev.type === 'for_goal') && ev.player){
     label += ` (#${ev.player})`;
   }
 
-  // Assist on our goals
   if (ev.type === 'for_goal' && ev.assist){
     label += ` A:${ev.assist === 'None' ? '—' : ('#' + ev.assist)}`;
   }
 
-  // On-ice groups
-  if (Array.isArray(ev.onIce) && ev.onIce.length && (ev.type === 'goal' || ev.type === 'soft_goal')){
-    label += ` [On-ice: ${compressUnknown(ev.onIce).join(', ')}]`;
-  }
-  if (Array.isArray(ev.forOnIce) && ev.forOnIce.length && ev.type === 'for_goal'){
+  if (ev.type === 'for_goal' && Array.isArray(ev.forOnIce) && ev.forOnIce.length){
     label += ` [For on-ice: ${compressUnknown(ev.forOnIce).join(', ')}]`;
   }
 
-  // Strength tags (PP/SH) for any goal events
-  if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
-      ev.strength && ev.strength !== 'EV') {
-    if (ev.strength === 'PP') {
-      label += ' [PP]';
-    } else if (ev.strength === 'SH') {
-      label += ' [SH]';
-    }
+  // Goals against: on-ice
+  if ((ev.type === 'goal' || ev.type === 'soft_goal') &&
+      Array.isArray(ev.onIce) && ev.onIce.length){
+    label += ` [On-ice: ${compressUnknown(ev.onIce).join(', ')}]`;
   }
 
-  // Goal Against: show context + BA/DZ/Bad Rebound cause flags
-  if (ev.type === 'goal' || ev.type === 'soft_goal') {
-    // How it was scored: Screen, Deflection, Rush, etc.
-    if (ev.ga_ctx){
-      label += ` {${ev.ga_ctx}}`;
-    }
+  // Strength tags for any goal (omit EV)
+  if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
+      ev.strength && ev.strength !== 'EV') {
+    label += ` [${ev.strength}]`;
+  }
 
-    // Cause flags (from 10s lookback)
-    const fromBA = !!(ev.ga_ba || ev.ga_cause === 'BA');
-    const fromDZ = !!(ev.ga_dz || ev.ga_cause === 'DZ');
-    const fromBR = !!(ev.ga_br || ev.ga_cause === 'BR');
+  // GA context: Screen, Deflection, Rush, Rebound, etc.
+  if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_ctx){
+    label += ` {${ev.ga_ctx}}`;
+  }
 
+  // GA cause(s): Breakaway / Turnover / Bad Rebound based on ga_cause
+  if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_cause){
+    const parts = String(ev.ga_cause).split('+');
     const causes = [];
-    if (fromBA) causes.push('Breakaway');
-    if (fromDZ) causes.push('Turnover');
-    if (fromBR) causes.push('Bad Rebound');
+    if (parts.includes('BA')) causes.push('Breakaway');
+    if (parts.includes('DZ')) causes.push('Turnover');
+    if (parts.includes('BR')) causes.push('Bad Rebound');
 
     if (causes.length){
-      // Single bracket, multiple causes if needed, e.g. "<Breakaway/Bad Rebound>"
+      // Example: <Breakaway>, <Turnover/Bad Rebound>
       label += ` <${causes.join('/')}>`;
     }
   }
