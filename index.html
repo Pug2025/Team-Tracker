@@ -692,22 +692,29 @@ function addEvent(type, meta={}){
     id: ++state.lastEventId,
     type,
     tISO:new Date().toISOString(),
-    period:state.period,
+    period: state.period,
     ...meta
   };
+
   state.events.push(ev);
   bump(type, state.period);
+
+  // For goals against, tag cause BEFORE first render
+  if (type === 'goal' || type === 'soft_goal') {
+    tagGACause(ev);
+  }
+
   save();
   renderAll();
   vibrate();
 
-  if(type==='shot' || type==='big_save'){
+  if (type === 'shot' || type === 'big_save') {
     scheduleGoodReboundCredit(ev.id);
   }
-  if(type==='goal' || type==='soft_goal'){
+  if (type === 'goal' || type === 'soft_goal') {
     openGAContext(ev);
-    tagGACause(ev);
   }
+
   return ev;
 }
 function undo(){
@@ -888,17 +895,22 @@ function openGAContext(ev){
   $('gaOverlay').style.display='flex';
 }
 $('gaGrid').addEventListener('click', e=>{
-  const chip = e.target.closest('.pickerBtn'); if(!chip || !lastGAEvent) return;
+  const chip = e.target.closest('.pickerBtn'); if (!chip || !lastGAEvent) return;
   lastGAEvent.ga_ctx = chip.dataset.t;
   save();
-  $('gaOverlay').style.display='none';
+  $('gaOverlay').style.display = 'none';
+
+  // Immediately reflect context in the log
+  renderAll();
+
   openMultiPicker({
-    title:'Select FIVE players on ice (GA)',
-    max:5,
-    event:lastGAEvent,
-    field:'onIce',
-    exclude:[]
+    title: 'Select FIVE players on ice (GA)',
+    max: 5,
+    event: lastGAEvent,
+    field: 'onIce',
+    exclude: []
   });
+
   lastGAEvent = null;
 });
 $('gaSkip').addEventListener('click', ()=>{
@@ -1017,22 +1029,25 @@ $('onIceClear').addEventListener('click', ()=>{
   updateOnIceMeta();
 });
 $('onIceUse').addEventListener('click', ()=>{
-  if(!multiPick.eventRef){
-    $('onIceModal').style.display='none';
+  if (!multiPick.eventRef) {
+    $('onIceModal').style.display = 'none';
     return;
   }
   const ev = multiPick.eventRef;
   const arr = [...multiPick.selected];
-  for(let i=0;i<multiPick.unknowns;i++) arr.push('Unknown');
+  for (let i = 0; i < multiPick.unknowns; i++) arr.push('Unknown');
   ev[multiPick.field] = arr;
   save();
-  $('onIceModal').style.display='none';
+  $('onIceModal').style.display = 'none';
   multiPick.eventRef = null;
 
+  // Reflect on-ice info immediately in the log/summary
+  renderAll();
+
   // After on-ice selection, offer PP/SH/EV tagging for goals
-  if(ev.type === 'goal' || ev.type === 'soft_goal'){
+  if (ev.type === 'goal' || ev.type === 'soft_goal') {
     openStrengthPicker(ev, 'Goal Against — PP/SH (optional)');
-  } else if(ev.type === 'for_goal'){
+  } else if (ev.type === 'for_goal') {
     openStrengthPicker(ev, 'Our Goal — PP/SH (optional)');
   }
 });
