@@ -85,6 +85,23 @@
   gap:2px;
   backdrop-filter:blur(6px);
 }
+
+/* Mobile: make scoreboard a full-width top banner */
+@media (max-width: 768px) {
+  .livebar{
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    border-radius: 0 0 10px 10px; /* banner style: flat on top, rounded bottom */
+    margin: 0;
+  }
+
+  .wrap{
+    padding-top: 80px; /* ensures content starts below fixed banner */
+  }
+}
+  
   /* Mobile / narrow screens: force fixed bar to dodge iOS sticky quirks */
 @media (max-width: 768px) {
   .livebar{
