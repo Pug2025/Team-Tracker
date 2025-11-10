@@ -713,65 +713,54 @@ function revert(ev){
   save();
 }
 
-/* ===== Undo interactions ===== */
-let undoHoldTimer=null, undoHeld=false;
-function startUndoHold(){
-  undoHeld=false;
-  undoHoldTimer=setTimeout(()=>{ undoHeld=true; showUndoModal(); }, 600);
-}
-function endUndoHold(){
-  if(undoHoldTimer){ clearTimeout(undoHoldTimer); undoHoldTimer=null; }
-  if(!undoHeld){ undo(); }
-}
-$('btnUndo').addEventListener('touchstart', startUndoHold, {passive:true});
-$('btnUndo').addEventListener('touchend', endUndoHold);
-$('btnUndo').addEventListener('mousedown', startUndoHold);
-$('btnUndo').addEventListener('mouseup', endUndoHold);
+/* ===== Undo interactions (pointer-safe, single fire) ===== */
+let undoHoldTimer = null;
+let undoHeld = false;
+let undoPointerActive = false;
 
-let lastRemovedEvent=null, toastTimer=null;
-function showToast(msg, evToRestore){
-  const t=$('toast');
-  t.innerHTML = `${msg} <button class="btn" id="toastRestore">Restore</button>`;
-  t.style.display='block';
-  lastRemovedEvent = evToRestore || null;
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>{
-    t.style.display='none';
-    lastRemovedEvent=null;
-  }, 5000);
-  document.getElementById('toastRestore').onclick=()=>{
-    if(!lastRemovedEvent) return;
-    state.events.push(lastRemovedEvent);
-    bump(lastRemovedEvent.type, lastRemovedEvent.period);
-    save();
-    renderAll();
-    t.style.display='none';
-    lastRemovedEvent=null;
-  };
+function startUndoHold(e){
+  // Ensure we only track one pointer sequence
+  if (undoPointerActive) return;
+  undoPointerActive = true;
+  undoHeld = false;
+
+  undoHoldTimer = setTimeout(() => {
+    undoHeld = true;
+    showUndoModal();
+  }, 600);
 }
-function showUndoModal(){
-  const list = $('undoList');
-  const last = state.events.slice(-5).reverse();
-  if(!last.length) return;
-  list.innerHTML = last.map(ev=>`<div class="undoRow" data-id="${ev.id}">
-      <div><b>P${ev.period}</b> • ${fmtTime(ev.tISO)}</div>
-      <div class="small">${labelFor(ev)}</div>
-    </div>`).join('');
-  $('undoModal').style.display='flex';
-}
-$('undoList').addEventListener('click', e=>{
-  const row = e.target.closest('.undoRow'); if(!row) return;
-  const id = Number(row.dataset.id);
-  const idx = state.events.findIndex(ev=>ev.id===id);
-  if(idx>=0){
-    const ev = state.events.splice(idx,1)[0];
-    revert(ev);
-    renderAll();
-    $('undoModal').style.display='none';
-    showToast(`Removed: ${labelFor(ev)}`, ev);
+
+function finishUndo(e){
+  if (!undoPointerActive) return;
+  undoPointerActive = false;
+
+  if (undoHoldTimer){
+    clearTimeout(undoHoldTimer);
+    undoHoldTimer = null;
   }
-});
-$('undoClose').addEventListener('click', ()=> $('undoModal').style.display='none');
+
+  // If hold did NOT complete → simple tap → undo last event
+  if (!undoHeld){
+    undo();
+  }
+}
+
+function cancelUndoHold(){
+  if (!undoPointerActive) return;
+  undoPointerActive = false;
+
+  if (undoHoldTimer){
+    clearTimeout(undoHoldTimer);
+    undoHoldTimer = null;
+  }
+}
+
+// Use pointer events so we don't double-trigger on touch+mouse
+const undoBtn = $('btnUndo');
+undoBtn.addEventListener('pointerdown', startUndoHold);
+undoBtn.addEventListener('pointerup', finishUndo);
+undoBtn.addEventListener('pointerleave', cancelUndoHold);
+undoBtn.addEventListener('pointercancel', cancelUndoHold);
 
 /* ===== Labels ===== */
 function labelFor(ev){
@@ -792,9 +781,15 @@ function labelFor(ev){
   if(ev.forOnIce && Array.isArray(ev.forOnIce) && ev.forOnIce.length){
     label += ` [For on-ice: ${compressUnknown(ev.forOnIce).join(', ')}]`;
   }
-  if(ev.strength){
-    label += ` [${ev.strength}]`;
+ // Show PP/SH tags for goals in the log (Our Goals and Goals Against)
+if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
+    ev.strength && ev.strength !== 'EV') {
+  if (ev.strength === 'PP') {
+    label += ' [PP]';
+  } else if (ev.strength === 'SH') {
+    label += ' [SH]';
   }
+}
   if(ev.ga_ba || ev.ga_dz || ev.ga_br){
     const tags = [];
     if(ev.ga_ba) tags.push('BA');
