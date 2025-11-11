@@ -12,7 +12,7 @@
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
     --good:#35c759; --warn:#ff9f0a; --bad:#ff453a; --btn:#1f2a38; --btn2:#243041; --radius:14px;
   }
-  html,body{height:100%}
+  html,body{height:100%}e
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -1204,29 +1204,141 @@ function perPlayerTallies(){
 }
 
 /* ===== Scoring ===== */
+
+  /* ===== Level profiles (age-adjusted expectations) ===== */
+
+const LEVEL_PROFILES = {
+  U9:  { goalieBaseSV:0.75, teamFinExp:0.20, baTol:4, dzTol:6, minShots:10 },
+  U11: { goalieBaseSV:0.80, teamFinExp:0.17, baTol:3, dzTol:5, minShots:15 },
+  U13: { goalieBaseSV:0.82, teamFinExp:0.15, baTol:3, dzTol:4, minShots:18 },
+  U15: { goalieBaseSV:0.86, teamFinExp:0.13, baTol:2, dzTol:3, minShots:22 },
+  U18: { goalieBaseSV:0.89, teamFinExp:0.12, baTol:2, dzTol:3, minShots:25 },
+  Other:{ goalieBaseSV:0.85, teamFinExp:0.14, baTol:3, dzTol:4, minShots:20 }
+};
+
+function getLevelProfile(level){
+  const key = String(level || '').toUpperCase();
+  if (key.includes('U9'))  return LEVEL_PROFILES.U9;
+  if (key.includes('U11')) return LEVEL_PROFILES.U11;
+  if (key.includes('U13')) return LEVEL_PROFILES.U13;
+  if (key.includes('U15')) return LEVEL_PROFILES.U15;
+  if (key.includes('U18')) return LEVEL_PROFILES.U18;
+  return LEVEL_PROFILES.Other;
+}
 function computeGoalieScore(){
   const C = state.countsA;
-  const shots = C.shots, ga = C.goals, saves = Math.max(0, shots - ga);
-  const sv    = shots>0 ? (saves/shots) : 1;
+  const shots = C.shots || 0;
+  const ga = C.goals || 0;
+  const saves = Math.max(0, shots - ga);
+  const sv = shots > 0 ? saves / shots : 1;
 
-  const goodRebounds = state.events.filter(e=>e.goodRebound).length;
-  const defensiveDen = Math.max(1, saves + ga + C.smothers + goodRebounds);
-  const badRate      = clamp01(C.badRebounds / defensiveDen);
-  let scoreRebound   = 20 * (1 - badRate) + Math.min(4, 4 * (goodRebounds/defensiveDen));
-  scoreRebound = Math.max(0, Math.min(24, scoreRebound));
+  const prof = getLevelProfile(state.level);
+  const baseSV = prof.goalieBaseSV;
+  const volumeFactor = clamp01(shots / (prof.minShots || 15));
 
-  const scoreSV   = shots>0 ? 60 * sv : 40;
-  const scoreSoft = Math.max(0, 10 - 5 * C.softGoals);
-  const scoreBig  = Math.min(10, 2 * C.bigSaves);
+  // 1. Core shot-stopping vs age expectation (0–70)
+  // svFloor: ugly game; svCeil: excellent relative to level.
+  const svFloor = Math.max(0.50, baseSV - 0.25);
+  const svCeil  = Math.min(0.98, baseSV + 0.15);
 
-  let total = Math.round(scoreSV + scoreRebound + scoreSoft + scoreBig);
-  if(total<0) total=0;
-  if(total>100) total=100;
+  let svNorm;
+  if (shots === 0) {
+    svNorm = 0.5; // totally neutral if nothing to do
+  } else if (sv <= svFloor) {
+    svNorm = 0;
+  } else if (sv >= svCeil) {
+    svNorm = 1;
+  } else {
+    svNorm = (sv - svFloor) / (svCeil - svFloor);
+  }
+
+  // Raw core score, then shrink toward neutral (35) in low-volume games
+  let scoreSV = 70 * svNorm;
+  scoreSV = 35 + volumeFactor * (scoreSV - 35);
+
+  // 2. Soft goal penalty (0 to -20)
+  // Each soft goal is a big problem; cannot be ignored.
+  const softGoals = C.softGoals || 0;
+  const softPenalty = Math.max(-20, -8 * softGoals);
+
+  // 3. Contextual difficulty adjustment (-10 to +10)
+  // Reward if most GA are legitimately hard; punish if GA are bad/avoidable.
+  const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
+  let hard = 0;
+  let soft = 0;
+
+  for (const ev of gas){
+    const ctx = ev.ga_ctx || '';
+    const st  = ev.strength || 'EV';
+    const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
+
+    let s = 0;
+
+    // Hard chance signals
+    if (/Screen/i.test(ctx))            s += 0.8;
+    if (/Deflection/i.test(ctx))        s += 1.0;
+    if (/Cross-Crease/i.test(ctx))      s += 0.8;
+    if (/Weak-Side/i.test(ctx))         s += 0.6;
+    if (/Rush/i.test(ctx))              s += 0.5;
+    if (/Rebound/i.test(ctx))           s += 0.5;
+    if (st === 'SH')                    s += 0.7; // GA while shorthanded: less blame
+    if (cause.includes('BA'))           s += 1.0; // breakaway against
+    if (cause.includes('DZ'))           s += 0.4; // team turnover
+
+    // Bad / avoidable signals
+    if (ev.type === 'soft_goal')        s -= 1.5;
+    if (st === 'PP')                    s -= 0.7; // GA while on PP: bad
+    if (cause.includes('BR'))           s -= 0.8; // off own bad rebound
+
+    if (s > 0) hard += s;
+    else if (s < 0) soft += -s;
+  }
+
+  let ctxAdj = 0;
+  if (gas.length){
+    const net = (hard - soft) / gas.length; // typical range ~ -2 to +2
+    if (net > 0){
+      ctxAdj = Math.min(10, net * 4);   // cap +10
+    } else if (net < 0){
+      ctxAdj = Math.max(-10, net * 4);  // cap -10
+    }
+  }
+
+  // 4. Rebound control (0–10)
+  const goodRebounds = state.events.filter(e => e.goodRebound).length;
+  const rebDen = (C.badRebounds || 0) + goodRebounds + (C.smothers || 0);
+  let scoreRebound = 5;
+  if (rebDen > 0){
+    const quality = 1 - (C.badRebounds || 0) / rebDen; // 1 = perfect, 0 = all bad
+    scoreRebound = 10 * clamp01(quality);
+  }
+  scoreRebound *= volumeFactor; // low-volume games → soften effect
+
+  // 5. Big saves (0–10)
+  let scoreBig = 0;
+  if (shots > 0){
+    const big = C.bigSaves || 0;
+    scoreBig = Math.min(10, 1.5 * big);
+    scoreBig *= clamp01(shots / 15); // big saves matter more when busy
+  }
+
+  let total = scoreSV + softPenalty + ctxAdj + scoreRebound + scoreBig;
+
+  if (total < 0) total = 0;
+  if (total > 100) total = 100;
 
   return {
-    shots, ga, saves, sv,
-    scoreSV, scoreRebound, scoreSoft, scoreBig,
-    total, badRate, goodRebounds
+    shots,
+    ga,
+    saves,
+    sv,
+    scoreSV: Math.round(scoreSV),
+    softPenalty: Math.round(softPenalty),
+    ctxAdj: Math.round(ctxAdj),
+    scoreRebound: Math.round(scoreRebound),
+    scoreBig: Math.round(scoreBig),
+    goodRebounds,
+    total: Math.round(total)
   };
 }
 function computeTeamScore(){
@@ -1498,12 +1610,11 @@ function buildReadableSummary(){
 function buildTeamBreakdown(){
   const T = computeTeamScore();
   const parts = [
-    `Shot share contributed <b>${T.scoreSS.toFixed(1)}</b> pts`,
-    `Finishing <b>${T.scoreFin.toFixed(1)}</b>`,
-    `Impact (goal diff / volume) <b>${T.scoreImp.toFixed(1)}</b>`,
-    `Stability across periods <b>${T.scoreStab.toFixed(1)}</b>`,
-    `Breakaways against penalty <b>${Math.min(12, 3*(state.team.breakawaysAgainst||0)).toFixed(1)}</b>`,
-    `D-zone turnover penalty <b>${Math.min(12, 1.5*(state.team.dzTurnovers||0)).toFixed(1)}</b>`
+    `Shot share contributed <b>${T.scoreShare}</b> pts`,
+    `Scoreboard result contributed <b>${T.scoreResult}</b> pts`,
+    `Finishing vs age expectation contributed <b>${T.scoreOff}</b> pts`,
+    `Defensive habits (breakaways / D-zone turnovers) left <b>${T.scoreHabits}</b> pts`,
+    `Consistency across periods contributed <b>${T.scoreCons}</b> pts`
   ];
   return parts.join('. ') + '.';
 }
@@ -1522,8 +1633,13 @@ function endGame(){
   gsEl.classList.add(K.total>=85?'good':K.total>=70?'warn':'bad');
   tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'bad');
 
-  $('scoreBreakdown').innerHTML =
-    `Save % contributed <b>${K.scoreSV.toFixed(1)}</b> pts. Rebound control <b>${K.scoreRebound.toFixed(1)}</b> (good ${K.goodRebounds}, bad ${state.countsA.badRebounds}). Soft goals impact <b>${K.scoreSoft.toFixed(1)}</b>. Big saves <b>${K.scoreBig.toFixed(1)}</b>.`;
+$('scoreBreakdown').innerHTML =
+  `Shot-stopping vs level: <b>${K.scoreSV}</b> pts. ` +
+  `Context (shot quality, PP/SH, BA/DZ): <b>${K.ctxAdj}</b> pts. ` +
+  `Soft goals: <b>${K.softPenalty}</b> pts. ` +
+  `Rebound control: <b>${K.scoreRebound}</b> pts (good ${K.goodRebounds}, bad ${state.countsA.badRebounds}). ` +
+  `Big saves: <b>${K.scoreBig}</b> pts.`;
+  
   $('teamBreakdown').innerHTML = buildTeamBreakdown();
 
   $('summaryReadable').innerHTML = buildReadableSummary();
