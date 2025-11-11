@@ -1274,6 +1274,51 @@ function getLevelProfile(level){
 }
 
 /* ===== Goalie Score ===== */
+function countRedeemedBadRebounds(){
+  // Treat a bad rebound that is immediately followed by a smother or big save
+  // as partially redeemed (the goalie cleaned up the mess).
+  // We look in a short window after each bad_rebound and see what happens next.
+  const events = state.events || [];
+  let redeemed = 0;
+
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (ev.type !== 'bad_rebound') continue;
+
+    const t0 = new Date(ev.tISO).getTime();
+
+    for (let j = i + 1; j < events.length; j++) {
+      const next = events[j];
+
+      // Must be same period; if period changes, stop looking.
+      if (next.period !== ev.period) break;
+
+      const dt = new Date(next.tISO).getTime() - t0;
+
+      // If it's more than 5 seconds later, stop; rebound sequence is over.
+      if (dt > 5000) break;
+
+      // If the very next meaningful thing is a smother or big save, we count
+      // this bad rebound as "redeemed" (not as harsh in scoring).
+      if (next.type === 'smother' || next.type === 'big_save') {
+        redeemed++;
+        break;
+      }
+
+      // If instead it leads to another bad rebound, a goal/soft goal, or a new shot,
+      // then it’s not redeemed; stop checking this one.
+      if (next.type === 'goal' ||
+          next.type === 'soft_goal' ||
+          next.type === 'shot' ||
+          next.type === 'bad_rebound') {
+        break;
+      }
+    }
+  }
+
+  return redeemed;
+}
+  
 function computeGoalieScore(){
   const C = state.countsA;
   const shots = C.shots || 0;
@@ -1285,13 +1330,14 @@ function computeGoalieScore(){
   const baseSV = prof.goalieBaseSV;
   const volumeFactor = clamp01(shots / (prof.minShots || 15));
 
-  // 1. Core shot-stopping vs expectation (0–70)
-  const svFloor = Math.max(0.50, baseSV - 0.25);
-  const svCeil  = Math.min(0.98, baseSV + 0.15);
+  // ===== 1. Core shot-stopping vs level (0–70, anchored around 35) =====
+  const svFloor = Math.max(0.50, baseSV - 0.25); // "ugly" range
+  const svCeil  = Math.min(0.98, baseSV + 0.15); // excellent for that level
 
   let svNorm;
   if (shots === 0) {
-    svNorm = 0.5; // neutral, no work
+    // No work = neutral
+    svNorm = 0.5;
   } else if (sv <= svFloor) {
     svNorm = 0;
   } else if (sv >= svCeil) {
@@ -1301,16 +1347,20 @@ function computeGoalieScore(){
   }
 
   let scoreSV = 70 * svNorm;
-  scoreSV = 35 + volumeFactor * (scoreSV - 35); // pull toward neutral at low volume
+  // Low-shot games: pull toward neutral 35 so one fluke doesn’t explode the rating.
+  scoreSV = 35 + volumeFactor * (scoreSV - 35);
 
-  // 2. Soft goal penalty (0 to -20)
+  // ===== 2. Soft goal penalty (up to -20) =====
   const softGoals = C.softGoals || 0;
   const softPenalty = Math.max(-20, -8 * softGoals);
 
-  // 3. Contextual difficulty adjustment (-10 to +10)
+  // ===== 3. Context: HOW the goals went in (only mitigates, never boosts) =====
+  // Previously, a "hard" goal (screen, deflection, etc.) could add a net positive,
+  // which meant adding a GA could *raise* the score. That’s what you saw. No more.
   const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
+
   let hard = 0;
-  let soft = 0;
+  let avoidable = 0;
 
   for (const ev of gas){
     const ctx = ev.ga_ctx || '';
@@ -1319,88 +1369,75 @@ function computeGoalieScore(){
 
     let s = 0;
 
-    // Hard chance signals
+    // Hard chance signals (make this GA more understandable)
     if (/Screen/i.test(ctx))            s += 0.8;
     if (/Deflection/i.test(ctx))        s += 1.0;
     if (/Cross-Crease/i.test(ctx))      s += 0.8;
     if (/Weak-Side/i.test(ctx))         s += 0.6;
     if (/Rush/i.test(ctx))              s += 0.5;
     if (/Rebound/i.test(ctx))           s += 0.5;
-    if (st === 'SH')                    s += 0.7;
-    if (cause.includes('BA'))           s += 1.0;
-    if (cause.includes('DZ'))           s += 0.4;
+    if (st === 'SH')                    s += 0.7; // GA while PK: less blame
+    if (cause.includes('BA'))           s += 1.0; // breakaway
+    if (cause.includes('DZ'))           s += 0.4; // turnover in front
 
-    // Bad / avoidable
+    // Avoidable / bad signals
     if (ev.type === 'soft_goal')        s -= 1.5;
-    if (st === 'PP')                    s -= 0.7;
-    if (cause.includes('BR'))           s -= 0.8;
+    if (st === 'PP')                    s -= 0.7; // getting scored on while ON PP
+    if (cause.includes('BR'))           s -= 0.8; // off own bad rebound
 
     if (s > 0) hard += s;
-    else if (s < 0) soft += -s;
+    else if (s < 0) avoidable += -s;
   }
 
+  // NEW RULE:
+  // - We ONLY apply a negative adjustment for "too many avoidable" goals.
+  // - We do NOT give a positive bonus for hard goals.
+  //   They are already "priced in" by not being labeled soft / bad.
   let ctxAdj = 0;
   if (gas.length){
-    const net = (hard - soft) / gas.length;
-    if (net > 0){
-      ctxAdj = Math.min(10, net * 4);
-    } else if (net < 0){
+    const net = (hard - avoidable) / gas.length;
+    if (net < 0){
+      // More avoidable than hard: apply extra negative (down to -10)
       ctxAdj = Math.max(-10, net * 4);
+    } else {
+      // Plenty of hard goals: just don't punish further; no bonus.
+      ctxAdj = 0;
     }
   }
 
-  // 4. Rebound control with "salvaged" bad rebounds
+  // ===== 4. Rebound control (0–10), with "redeemed" bad rebounds =====
+  // - goodRebound: automatically tagged when a shot/big save leads to clean control
+  // - bad_rebound: negative, but:
+  //     bad_rebound → quick smother / big_save = partially redeemed
   const goodRebounds = state.events.filter(e => e.goodRebound).length;
+  const totalBad = C.badRebounds || 0;
+  const redeemedBad = countRedeemedBadRebounds();
 
-  let pureBad = 0;
-  let salvaged = 0;
-  const events = state.events;
-
-  for (let i = 0; i < events.length; i++){
-    const ev = events[i];
-    if (ev.type !== 'bad_rebound') continue;
-
-    const t0 = new Date(ev.tISO).getTime();
-    let redeemed = false;
-
-    for (let j = i + 1; j < events.length; j++){
-      const next = events[j];
-      const dt = new Date(next.tISO).getTime() - t0;
-      if (dt > 4000) break; // window closes
-
-      if (next.type === 'smother' || next.type === 'big_save'){
-        redeemed = true;
-        break;
-      }
-      if (next.type === 'goal' || next.type === 'soft_goal'){
-        break; // turned into GA → no redemption
-      }
-    }
-
-    if (redeemed) salvaged++;
-    else pureBad++;
-  }
-
-  // Salvaged bad rebounds: partial penalty
-  const effectiveBad = pureBad + 0.4 * salvaged;
+  // Bad rebounds that were immediately cleaned up are discounted.
+  const effectiveBad = Math.max(0, totalBad - redeemedBad);
 
   const rebDen = effectiveBad + goodRebounds + (C.smothers || 0);
-  let scoreRebound = 5;
+  let scoreRebound = 5; // neutral anchor
+
   if (rebDen > 0){
-    const quality = 1 - effectiveBad / rebDen;
+    const quality = 1 - (effectiveBad / rebDen); // 1 = all good/clean, 0 = all bad
     scoreRebound = 10 * clamp01(quality);
   }
+
+  // Low volume? Shrink impact.
   scoreRebound *= volumeFactor;
 
-  // 5. Big saves (0–10)
+  // ===== 5. Big saves (0–10) =====
   let scoreBig = 0;
   if (shots > 0){
     const big = C.bigSaves || 0;
     scoreBig = Math.min(10, 1.5 * big);
-    scoreBig *= clamp01(shots / 15);
+    scoreBig *= clamp01(shots / 15); // big saves matter more when busy
   }
 
+  // ===== Total =====
   let total = scoreSV + softPenalty + ctxAdj + scoreRebound + scoreBig;
+
   if (total < 0) total = 0;
   if (total > 100) total = 100;
 
@@ -1415,6 +1452,8 @@ function computeGoalieScore(){
     scoreRebound: Math.round(scoreRebound),
     scoreBig: Math.round(scoreBig),
     goodRebounds,
+    redeemedBad,
+    effectiveBad,
     total: Math.round(total)
   };
 }
