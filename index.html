@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.6.2)</title>
+<title>Team Tracker – iPhone (v3.6.3)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -84,10 +84,9 @@
     flex-direction:column;
     gap:2px;
     backdrop-filter:blur(6px);
-    box-sizing:border-box; 
+    box-sizing:border-box;
   }
 
-  /* Mobile: full-width top banner */
   @media (max-width: 768px) {
     .livebar{
       left:0;
@@ -98,7 +97,7 @@
       margin:0;
     }
     .wrap{
-      padding-top:80px; /* ensure content starts below banner */
+      padding-top:80px;
     }
   }
 
@@ -116,12 +115,32 @@
     color:var(--muted);
   }
 
+  /* Centered live score boxes */
+  .scoresRow{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-top:12px;
+  }
+  .scoreBox{
+    background:#101520;
+    border:1px solid #233044;
+    border-radius:12px;
+    padding:10px 14px;
+    min-width:150px;
+    text-align:center;
+  }
+  .scoreBox h3{margin:0 0 4px;font-size:12px;color:var(--muted)}
+  .scoreBox .val{font-size:22px;font-weight:800}
+  .good{color:var(--good)}
+  .warn{color:var(--warn)}
+  .badc{color:var(--bad)} /* class name 'bad' already used for button; avoid collision */
+
   .stats{
     display:grid;
     grid-template-columns:repeat(3,1fr);
     gap:8px;
     margin-top:12px;
-    align-items:stretch;
   }
   .card{
     background:#101520;
@@ -131,12 +150,7 @@
   }
   .card h3{margin:0 0 2px;font-size:12px;color:var(--muted)}
   .card .val{font-size:18px;font-weight:700}
-  .stats-center{
-    grid-column:1 / -1;
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:8px;
-  }
+
   .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
   .pchip{
     background:#0f1a28;
@@ -194,9 +208,6 @@
 
   .small{font-size:12px;color:var(--muted)}
   .score{font-size:44px;font-weight:800;letter-spacing:1px}
-  .good{color:var(--good)}
-  .warn{color:var(--warn)}
-  .bad{color:var(--bad)}
   .hidden{display:none}
   .banner{
     margin-top:8px;
@@ -290,6 +301,9 @@
   table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #233044;padding:6px 8px;font-size:12px}
   th{background:#0f1a28;color:#cfe5ff;text-align:left}
+
+  /* Debug panel */
+  .debugCard .line{font-size:12px;color:#b8c8dc;margin-top:4px;word-break:break-word}
 </style>
 </head>
 <body>
@@ -298,7 +312,7 @@
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.6.2</div>
+      <div class="tag" id="gameMetaTag">New game • v3.6.3</div>
     </div>
   </header>
 
@@ -376,20 +390,20 @@
       <button class="btn period" id="btnNextPeriod" type="button">Next Period</button>
     </div>
 
-    <!-- Stats -->
-    <div class="stats" id="stats">
-      <!-- Centered running scores -->
-      <div class="stats-center">
-        <div class="card">
-          <h3>Goalie Score (live)</h3>
-          <div class="val" id="goalieLiveVal">—</div>
-        </div>
-        <div class="card">
-          <h3>Team Score (live)</h3>
-          <div class="val" id="teamLiveVal">—</div>
-        </div>
+    <!-- Centered live Goalie/Team scores -->
+    <div class="scoresRow" id="scoresRow">
+      <div class="scoreBox">
+        <h3>Goalie Score</h3>
+        <div class="val" id="gsLive">—</div>
       </div>
+      <div class="scoreBox">
+        <h3>Team Score</h3>
+        <div class="val" id="tsLive">—</div>
+      </div>
+    </div>
 
+    <!-- Stats (supporting metrics) -->
+    <div class="stats" id="stats">
       <div class="card"><h3>Saves</h3><div class="val" id="savesVal">0</div></div>
       <div class="card"><h3>Save %</h3><div class="val" id="svVal">—</div></div>
       <div class="card"><h3>Smothers</h3><div class="val" id="smotherVal">0</div></div>
@@ -401,13 +415,11 @@
       <div class="card"><h3>D-Zone TO</h3><div class="val" id="dzVal">0</div></div>
     </div>
 
-    <!-- Scoring debug toggle + panel -->
-    <div class="small" id="debugToggle" style="margin-top:6px; text-align:right; cursor:pointer; opacity:.6;">
-      Scoring debug
-    </div>
-    <div id="debugPanel" class="card hidden" style="margin-top:6px;">
-      <h3>Goalie Scoring Breakdown (live)</h3>
-      <div class="small" id="debugGoalie"></div>
+    <!-- Debug: concise, always visible -->
+    <div class="card debugCard" id="debugCard" style="margin-top:8px;">
+      <h3>Live Debug</h3>
+      <div class="line" id="debugGoalieLine">Goalie: —</div>
+      <div class="line" id="debugTeamLine">Team: —</div>
     </div>
 
     <div class="pgrid" id="periodSummary"></div>
@@ -560,7 +572,7 @@
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3602'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3605'));
 }
 
 /* ===== IndexedDB KV helper ===== */
@@ -699,7 +711,7 @@ function bump(type, period){
   }
 }
 
-/* Rebuild all tallies from events (used on init & precise restores) */
+/* Rebuild all tallies from events */
 function rebuildFromEvents(){
   per = {1:initP(),2:initP(),3:initP(),4:initP()};
   state.countsA = {shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0};
@@ -710,7 +722,7 @@ function rebuildFromEvents(){
   }
 }
 
-/* ===== Good Rebound auto-credit ===== */
+/* ===== Good Rebound auto-credit (redeemed bads) ===== */
 const pendingGood = new Map();
 function scheduleGoodReboundCredit(id){
   if(pendingGood.has(id)) clearTimeout(pendingGood.get(id));
@@ -929,14 +941,11 @@ function labelFor(ev){
     .replace('dz_turnover','D-Zone Turnover')
     .replace(/_/g,' ');
 
-  // Our shots / goals: player
   if ((ev.type === 'for_shot' || ev.type === 'for_goal') && ev.player){
     if (ev.player !== 'Unknown' && ev.player !== '?') {
       label += ` (#${ev.player})`;
     }
   }
-
-  // Assist
   if (ev.type === 'for_goal' && ev.assist){
     if (ev.assist === 'None' || ev.assist === 'Unknown'){
       label += ' A:—';
@@ -944,30 +953,20 @@ function labelFor(ev){
       label += ` A:#${ev.assist}`;
     }
   }
-
-  // For-goal on-ice
   if (ev.type === 'for_goal' && Array.isArray(ev.forOnIce) && ev.forOnIce.length){
     label += ` [For on-ice: ${compressUnknown(ev.forOnIce).join(', ')}]`;
   }
-
-  // GA on-ice
   if ((ev.type === 'goal' || ev.type === 'soft_goal') &&
       Array.isArray(ev.onIce) && ev.onIce.length){
     label += ` [On-ice: ${compressUnknown(ev.onIce).join(', ')}]`;
   }
-
-  // Strength tag (omit EV)
   if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
       ev.strength && ev.strength !== 'EV') {
     label += ` [${ev.strength}]`;
   }
-
-  // GA context
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_ctx){
     label += ` {${ev.ga_ctx}}`;
   }
-
-  // GA cause(s)
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_cause){
     const parts = String(ev.ga_cause).split('+');
     const causes = [];
@@ -978,7 +977,6 @@ function labelFor(ev){
       label += ` <${causes.join('/')}>`;
     }
   }
-
   return label;
 }
 
@@ -1250,43 +1248,6 @@ function getLevelProfile(level){
   if (key.includes('U18')) return LEVEL_PROFILES.U18;
   return LEVEL_PROFILES.Other;
 }
-
-/* Redeemed bad rebounds: bad_rebound followed quickly by smother/big_save */
-function countRedeemedBadRebounds(){
-  const events = state.events || [];
-  let redeemed = 0;
-
-  for (let i = 0; i < events.length; i++) {
-    const ev = events[i];
-    if (ev.type !== 'bad_rebound') continue;
-
-    const t0 = new Date(ev.tISO).getTime();
-
-    for (let j = i + 1; j < events.length; j++) {
-      const next = events[j];
-
-      if (next.period !== ev.period) break;
-
-      const dt = new Date(next.tISO).getTime() - t0;
-      if (dt > 5000) break;
-
-      if (next.type === 'smother' || next.type === 'big_save') {
-        redeemed++;
-        break;
-      }
-
-      if (next.type === 'goal' ||
-          next.type === 'soft_goal' ||
-          next.type === 'shot' ||
-          next.type === 'bad_rebound') {
-        break;
-      }
-    }
-  }
-
-  return redeemed;
-}
-
 function computeGoalieScore(){
   const C = state.countsA;
   const shots = C.shots || 0;
@@ -1298,7 +1259,7 @@ function computeGoalieScore(){
   const baseSV = prof.goalieBaseSV;
   const volumeFactor = clamp01(shots / (prof.minShots || 15));
 
-  // 1) Core shot-stopping vs level (0–70), neutral 35
+  // 1. Core shot-stopping vs age expectation (0–70)
   const svFloor = Math.max(0.50, baseSV - 0.25);
   const svCeil  = Math.min(0.98, baseSV + 0.15);
 
@@ -1316,14 +1277,14 @@ function computeGoalieScore(){
   let scoreSV = 70 * svNorm;
   scoreSV = 35 + volumeFactor * (scoreSV - 35);
 
-  // 2) Soft goal penalty
+  // 2. Soft goal penalty (0 to -20)
   const softGoals = C.softGoals || 0;
   const softPenalty = Math.max(-20, -8 * softGoals);
 
-  // 3) Context (mitigation only – never positive boost)
+  // 3. Contextual difficulty adjustment (-10 to +10)
   const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
   let hard = 0;
-  let avoidable = 0;
+  let soft = 0;
 
   for (const ev of gas){
     const ctx = ev.ga_ctx || '';
@@ -1332,7 +1293,7 @@ function computeGoalieScore(){
 
     let s = 0;
 
-    // Hard chance markers
+    // Hard chance signals
     if (/Screen/i.test(ctx))            s += 0.8;
     if (/Deflection/i.test(ctx))        s += 1.0;
     if (/Cross-Crease/i.test(ctx))      s += 0.8;
@@ -1343,40 +1304,36 @@ function computeGoalieScore(){
     if (cause.includes('BA'))           s += 1.0;
     if (cause.includes('DZ'))           s += 0.4;
 
-    // Avoidable markers
+    // Bad / avoidable signals
     if (ev.type === 'soft_goal')        s -= 1.5;
     if (st === 'PP')                    s -= 0.7;
     if (cause.includes('BR'))           s -= 0.8;
 
     if (s > 0) hard += s;
-    else if (s < 0) avoidable += -s;
+    else if (s < 0) soft += -s;
   }
 
   let ctxAdj = 0;
   if (gas.length){
-    const net = (hard - avoidable) / gas.length;
-    if (net < 0){
-      ctxAdj = Math.max(-10, net * 4); // penalty only
-    } else {
-      ctxAdj = 0;
+    const net = (hard - soft) / gas.length;
+    if (net > 0){
+      ctxAdj = Math.min(10, net * 4);
+    } else if (net < 0){
+      ctxAdj = Math.max(-10, net * 4);
     }
   }
 
-  // 4) Rebound control (0–10), redeemed bad rebounds reduce harm
+  // 4. Rebound control (0–10)
   const goodRebounds = state.events.filter(e => e.goodRebound).length;
-  const totalBad = C.badRebounds || 0;
-  const redeemedBad = countRedeemedBadRebounds();
-  const effectiveBad = Math.max(0, totalBad - redeemedBad);
-
-  const rebDen = effectiveBad + goodRebounds + (C.smothers || 0);
+  const rebDen = (C.badRebounds || 0) + goodRebounds + (C.smothers || 0);
   let scoreRebound = 5;
   if (rebDen > 0){
-    const quality = 1 - (effectiveBad / rebDen);
+    const quality = 1 - (C.badRebounds || 0) / rebDen;
     scoreRebound = 10 * clamp01(quality);
   }
   scoreRebound *= volumeFactor;
 
-  // 5) Big saves (0–10)
+  // 5. Big saves (0–10)
   let scoreBig = 0;
   if (shots > 0){
     const big = C.bigSaves || 0;
@@ -1385,6 +1342,7 @@ function computeGoalieScore(){
   }
 
   let total = scoreSV + softPenalty + ctxAdj + scoreRebound + scoreBig;
+
   if (total < 0) total = 0;
   if (total > 100) total = 100;
 
@@ -1399,12 +1357,9 @@ function computeGoalieScore(){
     scoreRebound: Math.round(scoreRebound),
     scoreBig: Math.round(scoreBig),
     goodRebounds,
-    redeemedBad,
-    effectiveBad,
     total: Math.round(total)
   };
 }
-
 function computeTeamScore(){
   const SF = state.countsF.shots, SA = state.countsA.shots;
   const GF = state.countsF.goals, GA = state.countsA.goals;
@@ -1453,12 +1408,24 @@ function shotShare(){
 /* ===== Render ===== */
 function updateMeta(){
   $('gameMetaTag').textContent =
-    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.6.2`;
+    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.6.3`;
 }
 function refreshStats(){
-  const A = state.countsA, F = state.countsF, Tm = state.team;
+  const A = state.countsA, F = state.countsF, T = state.team;
   const K = computeGoalieScore();
   const Team = computeTeamScore();
+
+  // Live Goalie/Team scores (center row)
+  const gs = $('gsLive'), ts = $('tsLive');
+  if (gs && ts){
+    gs.textContent = K.total;
+    ts.textContent = Team.total;
+
+    // color states
+    [gs,ts].forEach(el=>{ el.classList.remove('good','warn','badc'); });
+    gs.classList.add(K.total>=85?'good':K.total>=70?'warn':'badc');
+    ts.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'badc');
+  }
 
   $('savesVal').textContent   = K.saves;
   $('svVal').textContent      = A.shots>0 ? (K.sv).toFixed(3).slice(1) : '—';
@@ -1467,22 +1434,8 @@ function refreshStats(){
   $('bigVal').textContent     = A.bigSaves;
   $('shootVal').textContent   = F.shots>0 ? ((F.goals/F.shots).toFixed(3).slice(1)) : '—';
   $('ssVal').textContent      = ((shotShare()*100).toFixed(0)) + '%';
-  $('baVal').textContent      = Tm.breakawaysAgainst||0;
-  $('dzVal').textContent      = Tm.dzTurnovers||0;
-
-  // Centered live scores
-  const gl = $('goalieLiveVal');
-  const tl = $('teamLiveVal');
-  if (gl) {
-    gl.textContent = K.total;
-    gl.classList.remove('good','warn','bad');
-    gl.classList.add(K.total>=85?'good':K.total>=70?'warn':'bad');
-  }
-  if (tl) {
-    tl.textContent = Team.total;
-    tl.classList.remove('good','warn','bad');
-    tl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'bad');
-  }
+  $('baVal').textContent      = T.breakawaysAgainst||0;
+  $('dzVal').textContent      = T.dzTurnovers||0;
 
   const phtml = [1,2,3,4].map(p=>{
     const v = per[p];
@@ -1497,32 +1450,12 @@ function refreshStats(){
   }).join('');
   $('periodSummary').innerHTML = phtml;
 
-  const gsEl = $('goalieScoreNum'), tsEl = $('teamScoreNum');
-  if(gsEl && tsEl){
-    gsEl.textContent = K.total;
-    tsEl.textContent = Team.total;
-    [gsEl, tsEl].forEach(el=>el.classList.remove('good','warn','bad'));
-    gsEl.classList.add(K.total>=85?'good':K.total>=70?'warn':'bad');
-    tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'bad');
-  }
-
   $('liveGF').textContent = F.goals;
   $('liveGA').textContent = A.goals;
   $('liveSF').textContent = F.shots;
   $('liveSA').textContent = A.shots;
 
-  // Debug panel live breakdown
-  const dbg = $('debugGoalie');
-  if (dbg) {
-    dbg.innerHTML =
-      `Total <b>${K.total}</b> | ` +
-      `Core SV: <b>${K.scoreSV}</b> | ` +
-      `Soft: <b>${K.softPenalty}</b> | ` +
-      `Ctx: <b>${K.ctxAdj}</b> | ` +
-      `Rebound: <b>${K.scoreRebound}</b> ` +
-      `(bad ${K.effectiveBad}, redeemed ${K.redeemedBad}) | ` +
-      `Big: <b>${K.scoreBig}</b>`;
-  }
+  updateDebugLines();
 }
 function refreshLog(){
   $('log').innerHTML = state.events.slice(-200)
@@ -1596,6 +1529,8 @@ function makePlusMinusTable(){
       </table>
     </div>`;
 }
+
+/* Narrower GA table: merge causes into one column */
 function buildGASummary(){
   const gas = state.events.filter(e=>e.type==='goal' || e.type==='soft_goal');
   if(!gas.length){
@@ -1605,19 +1540,19 @@ function buildGASummary(){
         <div class="small">No goals against.</div>
       </div>`;
   }
-  // Compact: collapse BA/DZ/BR flags into one "Cause" column
   const rows = gas.map((ev,idx)=>{
     const when = fmtTime(ev.tISO);
     const ctx = ev.ga_ctx || 'Unspecified';
     const rawSt = ev.strength || 'EV';
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
 
+    // Merge BA/DZ/BR into a readable "Cause" cell
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
     const parts = [];
-    if (cause.includes('BA')) parts.push('Breakaway');
-    if (cause.includes('DZ')) parts.push('Turnover');
-    if (cause.includes('BR')) parts.push('Bad Rebound');
-    const causeText = parts.length ? parts.join('/') : 'Other/Unknown';
+    if (cause.includes('BA') || ev.ga_ba) parts.push('Breakaway');
+    if (cause.includes('DZ') || ev.ga_dz) parts.push('Turnover');
+    if (cause.includes('BR') || ev.ga_br) parts.push('Bad Rebound');
+    const causeStr = parts.length ? parts.join('; ') : '—';
 
     return `<tr>
       <td>${idx+1}</td>
@@ -1625,7 +1560,7 @@ function buildGASummary(){
       <td>${when}</td>
       <td>${ctx}</td>
       <td>${st}</td>
-      <td>${causeText}</td>
+      <td>${causeStr}</td>
     </tr>`;
   }).join('');
   return `
@@ -1641,6 +1576,7 @@ function buildGASummary(){
       </table>
     </div>`;
 }
+
 function buildReadableSummary(){
   const K = computeGoalieScore(), T = computeTeamScore();
   const F = state.countsF, A = state.countsA;
@@ -1698,9 +1634,15 @@ function buildReadableSummary(){
   `;
 }
 function buildTeamBreakdown(){
-  // Placeholder text until deeper decomposition is exposed
   const T = computeTeamScore();
-  return `Composite team score: <b>${Math.round(T.total)}</b>.`;
+  const parts = [
+    `Shot share contributed <b>${Math.round(T.scoreSS)}</b> pts`,
+    `Scoreboard result contributed <b>${Math.round(T.scoreImp)}</b> pts`,
+    `Finishing vs level contributed <b>${Math.round(T.scoreFin)}</b> pts`,
+    `Consistency contributed <b>${Math.round(T.scoreStab)}</b> pts`,
+    `Habits (BA/DZ) cost <b>${Math.min(12,3*(state.team.breakawaysAgainst||0))+Math.min(12,1.5*(state.team.dzTurnovers||0))}</b> pts`
+  ];
+  return parts.join('. ') + '.';
 }
 
 /* ===== Summary flow ===== */
@@ -1713,15 +1655,15 @@ function endGame(){
   const gsEl = $('goalieScoreNum'), tsEl = $('teamScoreNum');
   gsEl.textContent = K.total;
   tsEl.textContent = Team.total;
-  [gsEl, tsEl].forEach(el=>el.classList.remove('good','warn','bad'));
-  gsEl.classList.add(K.total>=85?'good':K.total>=70?'warn':'bad');
-  tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'bad');
+  [gsEl, tsEl].forEach(el=>el.classList.remove('good','warn','badc'));
+  gsEl.classList.add(K.total>=85?'good':K.total>=70?'warn':'badc');
+  tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'badc');
 
   $('scoreBreakdown').innerHTML =
     `Shot-stopping vs level: <b>${K.scoreSV}</b> pts. ` +
-    `Context (quality/PP-SH/BA-DZ/BR): <b>${K.ctxAdj}</b> pts. ` +
+    `Context (shot quality, PP/SH, BA/DZ): <b>${K.ctxAdj}</b> pts. ` +
     `Soft goals: <b>${K.softPenalty}</b> pts. ` +
-    `Rebound control: <b>${K.scoreRebound}</b> pts (bad ${K.effectiveBad}, redeemed ${K.redeemedBad}). ` +
+    `Rebound control: <b>${K.scoreRebound}</b> pts (good ${K.goodRebounds}, bad ${state.countsA.badRebounds}, smother ${state.countsA.smothers}). ` +
     `Big saves: <b>${K.scoreBig}</b> pts.`;
 
   $('teamBreakdown').innerHTML = buildTeamBreakdown();
@@ -2101,15 +2043,6 @@ $('periodChips').addEventListener('click', async e=>{
   }
 });
 
-/* Debug toggle */
-const debugToggle = $('debugToggle');
-const debugPanel = $('debugPanel');
-if (debugToggle && debugPanel) {
-  debugToggle.addEventListener('click', () => {
-    debugPanel.classList.toggle('hidden');
-  });
-}
-
 /* Modal backdrop close */
 ['rosterModal','pickerModal','copyModal','gaOverlay','undoModal','onIceModal','strengthModal'].forEach(id=>{
   const el = $(id);
@@ -2122,6 +2055,37 @@ if (debugToggle && debugPanel) {
     }
   });
 });
+
+/* ===== Debug line updater (shows smothers) ===== */
+function updateDebugLines(){
+  const gEl = document.getElementById('debugGoalieLine');
+  const tEl = document.getElementById('debugTeamLine');
+  if (!gEl || !tEl) return;
+
+  const K = computeGoalieScore();
+  const T = computeTeamScore();
+
+  const bad = state.countsA.badRebounds || 0;
+  const smothers = state.countsA.smothers || 0;
+  const redeemed = K.goodRebounds || 0;
+
+  gEl.textContent =
+    `Goalie: Total ${K.total} | Core SV: ${K.scoreSV} | Soft: ${K.softPenalty} | ` +
+    `Ctx: ${K.ctxAdj} | Rebound: ${K.scoreRebound} (bad ${bad}, smother ${smothers}, redeemed ${redeemed}) | ` +
+    `Big: ${K.scoreBig}`;
+
+  const ssPct = Math.round((T.SS || 0) * 100);
+  const finPct = Math.round((T.Fin || 0) * 100);
+  const modBA = Math.min(12, 3 * (state.team.breakawaysAgainst || 0));
+  const modDZ = Math.min(12, 1.5 * (state.team.dzTurnovers || 0));
+
+  tEl.textContent =
+    `Team: Total ${Math.round(T.total)} | ShotShare +${Math.round(T.scoreSS)} | ` +
+    `Finishing +${Math.round(T.scoreFin)} | Scoreboard +${Math.round(T.scoreImp)} | ` +
+    `Consistency +${Math.round(T.scoreStab)} | Habits −${Math.round(modBA + modDZ)} ` +
+    `(BA ${state.team.breakawaysAgainst || 0}, DZ ${state.team.dzTurnovers || 0}) | ` +
+    `SS ${ssPct}% | Fin ${finPct}%`;
+}
 
 /* extra saves */
 window.addEventListener('pagehide', save);
