@@ -6,12 +6,28 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.6.3)</title>
+<title>Team Tracker – iPhone (v3.7.0)</title>
 <style>
   :root{
-    --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
-    --good:#35c759; --warn:#ff9f0a; --bad:#ff453a; --btn:#1f2a38; --btn2:#243041; --radius:14px;
+    /* Updated tokens (AA contrast, calmer dark UI) */
+    --bg:#0d1117; 
+    --panel:#121826; 
+    --ink:#F2F5F8; 
+    --muted:#B7C3CF; 
+    --border:#273446; 
+    --accent:#3DA0FF;
+    --good:#34C759; 
+    --warn:#FFB020; 
+    --bad:#FF5A52;
+
+    --btn:#1a2230; 
+    --btn2:#1e2a3b; 
+    --radius:14px;
+
+    --elev-border:1px solid var(--border);
+    --shadow-none:none;
   }
+
   html,body{height:100%}
   body{
     margin:0;
@@ -19,20 +35,40 @@
     background:var(--bg);
     color:var(--ink);
   }
-  .wrap{max-width:520px;margin:0 auto;padding:14px}
-  header{
-    display:flex;align-items:center;justify-content:space-between;
-    gap:12px;margin:6px 0 6px;
-  }
-  header h1{font-size:20px;margin:0;letter-spacing:.2px}
-  .tag{font-size:12px;color:var(--muted)}
-  .inlineRow{display:flex;gap:8px;align-items:center}
+  .wrap{max-width:520px;margin:0 auto;padding:12px 14px 80px 14px} /* extra bottom padding for floaters */
 
+  /* === Sticky App Bar (merged header + livebar) === */
+  .appbar{
+    position:sticky; top:0; z-index:999;
+    backdrop-filter:blur(8px);
+    background:rgba(13,17,23,0.85);
+    border-bottom:var(--elev-border);
+  }
+  .appbar-inner{max-width:520px;margin:0 auto;padding:8px 14px 8px}
+  .appbar-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .app-title{display:flex;align-items:center;gap:10px}
+  .app-title h1{font-size:22px;margin:0;letter-spacing:.2px}
+  .btn.roster{
+    background:#20324a;border:none;color:var(--ink);
+    padding:8px 10px;border-radius:12px;font-size:14px;font-weight:600;
+    -webkit-tap-highlight-color:transparent;cursor:pointer;
+  }
+  .badges{display:flex;gap:8px;align-items:center}
+  .badge{
+    font-size:13px;font-weight:700;
+    background:#101826;border:var(--elev-border);
+    padding:6px 8px;border-radius:10px;
+  }
+  .app-meta{font-size:12px;color:var(--muted)}
+  .app-shots{font-size:12px;color:var(--muted)}
+
+  /* === Panels & cards === */
   .panel{
     background:var(--panel);
     border-radius:var(--radius);
     padding:12px;
-    box-shadow:0 6px 18px rgba(0,0,0,.25);
+    border:var(--elev-border);
+    box-shadow:var(--shadow-none);
     margin-top:10px;
   }
 
@@ -44,97 +80,60 @@
     background:var(--btn);color:var(--ink);font-size:14px;outline:none;
   }
 
+  /* === Action grid (neutral buttons; semantic accents as badges) === */
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
   .btn{
     -webkit-tap-highlight-color:transparent;
-    background:var(--btn2);color:var(--ink);border:none;
-    padding:16px 14px;border-radius:14px;font-size:16px;font-weight:600;
-    box-shadow:0 6px 12px rgba(0,0,0,.22);
+    background:var(--btn2);color:var(--ink);border:var(--elev-border);
+    padding:16px 14px;border-radius:14px;font-size:17px;font-weight:600;
+    box-shadow:var(--shadow-none);
     touch-action:manipulation;user-select:none;cursor:pointer;
+    position:relative;
   }
-  .btn:active{transform:scale(.98)}
-  .btn.shot{background:#1e2f47}
-  .btn.goal{background:#3a2230}
-  .btn.soft{background:#4b2430}
-  .btn.smother{background:#1d3b2a}
-  .btn.bad{background:#3b2a1d}
-  .btn.big{background:#1d2f3b}
-  .btn.undo{background:#2b3240}
-  .btn.period{background:#2a2f3a}
-  .btn.end{background:linear-gradient(180deg,#345e2f,#1f381c)}
-  .btn.roster{background:#20324a;padding:10px 12px;font-size:14px}
-  .btn.team{background:#2a2342}
-  .btn.team:active,.btn.roster:active{transform:scale(.97)}
+  .btn:active{transform:scale(.985)}
+  .btn .sem{
+    position:absolute;right:10px;top:10px;
+    font-size:11px;font-weight:800;letter-spacing:.2px;
+    padding:2px 6px;border-radius:999px;border:1px solid currentColor;opacity:.9
+  }
+  /* semantic badges (text color only) */
+  .shot .sem{color:var(--warn)}
+  .goal .sem{color:var(--bad)}
+  .soft .sem{color:var(--bad)}
+  .smother .sem{color:var(--good)}
+  .badreb .sem{color:var(--warn)}
+  .big .sem{color:var(--good)}
+  .teambtn .sem{color:var(--accent)}
 
-  /* Live floating scoreboard */
-  .livebar{
-    position:fixed;
-    top:0;
-    left:50%;
-    transform:translateX(-50%);
-    width:calc(100% - 28px);
-    max-width:520px;
-    z-index:999;
-    margin:0;
-    padding:8px 10px;
-    border-radius:10px;
-    background:#101520;
-    border:1px solid #233044;
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-    backdrop-filter:blur(6px);
-    box-sizing:border-box;
+  /* Floater actions (Undo / Next Period) */
+  .float-actions{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:12px;z-index:1000;display:flex;gap:10px;pointer-events:none;
+    width:calc(100% - 28px);max-width:520px;justify-content:space-between;
+  }
+  .float-btn{
+    pointer-events:auto;
+    background:#0f1e32;border:1px solid #274468;color:#d9ecff;
+    padding:12px 14px;border-radius:999px;font-size:14px;font-weight:700;
   }
 
-  @media (max-width: 768px) {
-    .livebar{
-      left:0;
-      transform:none;
-      width:100%;
-      max-width:none;
-      border-radius:0 0 10px 10px;
-      margin:0;
-    }
-    .wrap{
-      padding-top:80px;
-    }
+  /* === Split score card with arcs === */
+  .scoresRow{margin-top:12px}
+  .scoreSplit{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
   }
-
-  .livebar-main{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:18px;
-    font-weight:700;
+  .scorePane{
+    background:#101826;border:var(--elev-border);border-radius:12px;padding:10px;
+    display:flex;align-items:center;gap:10px;min-height:78px;
   }
-  .livebar-sub{
-    display:flex;
-    justify-content:space-between;
-    font-size:12px;
-    color:var(--muted);
+  .scorePane h3{margin:0 0 2px;font-size:12px;color:var(--muted)}
+  .scorePane .num{font-size:22px;font-weight:800;line-height:1}
+  .arc{
+    width:56px;height:56px;flex:0 0 56px;
   }
-
-  /* Centered live score boxes */
-  .scoresRow{
-    display:flex;
-    justify-content:center;
-    gap:10px;
-    margin-top:12px;
-  }
-  .scoreBox{
-    background:#101520;
-    border:1px solid #233044;
-    border-radius:12px;
-    padding:10px 14px;
-    min-width:150px;
-    text-align:center;
-  }
-  .scoreBox h3{margin:0 0 4px;font-size:12px;color:var(--muted)}
-  .scoreBox .val{font-size:22px;font-weight:800}
   .good{color:var(--good)}
   .warn{color:var(--warn)}
-  .badc{color:var(--bad)} /* class name 'bad' already used for button; avoid collision */
+  .badc{color:var(--bad)} /* keep 'badc' to avoid .bad class collision */
 
   .stats{
     display:grid;
@@ -143,192 +142,98 @@
     margin-top:12px;
   }
   .card{
-    background:#101520;
-    border:1px solid #233044;
-    border-radius:12px;
-    padding:10px;
+    background:#101826;border:var(--elev-border);border-radius:12px;padding:10px;
   }
   .card h3{margin:0 0 2px;font-size:12px;color:var(--muted)}
   .card .val{font-size:18px;font-weight:700}
 
-  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
-  .pchip{
-    background:#0f1a28;
-    border:1px solid #223045;
-    border-radius:10px;
-    padding:8px;
-  }
-  .pchip h4{margin:0 0 4px;font-size:11px;color:#9ab7d6}
-  .pchip div{font-size:13px;font-weight:700}
-
   .periods{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:8px;
-    margin-top:4px;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;margin-top:4px;
   }
   .chip{
-    text-align:center;
-    padding:10px 8px;
-    border-radius:10px;
-    border:1px solid #2a3444;
-    background:#152030;
-    font-weight:700;
-    cursor:pointer;
-    user-select:none;
+    text-align:center;padding:10px 8px;border-radius:10px;border:1px solid #2a3444;
+    background:#152030;font-weight:700;user-select:none;cursor:pointer;
   }
   .chip.active{
-    background:#1b3352;
-    border-color:#2f5e9a;
-    color:#cfe5ff;
+    background:#1b3352;border-color:#2f5e9a;color:#cfe5ff;
   }
 
-  .log{
-    margin-top:10px;
-    max-height:180px;
-    overflow:auto;
-    border:1px solid #233044;
-    border-radius:12px;
-    padding:8px;
-    background:#0f141d;
-  }
-  .log .item{
-    font-size:13px;
-    padding:6px 4px;
-    border-bottom:1px dashed #202b3b;
-  }
+  /* Collapsible log & debug */
+  .collapsible{margin-top:10px}
+  .collapsible header{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .chev{font-size:16px;color:var(--muted)}
+  .collapsible .content{max-height:0;overflow:hidden;transition:max-height .25s ease}
+  .collapsible.open .content{max-height:240px}
+  .log .item{font-size:13px;padding:6px 4px;border-bottom:1px dashed #202b3b}
   .log .item:last-child{border-bottom:none}
-
-  .foot-actions{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    margin-top:10px;
-  }
 
   .small{font-size:12px;color:var(--muted)}
   .score{font-size:44px;font-weight:800;letter-spacing:1px}
   .hidden{display:none}
   .banner{
-    margin-top:8px;
-    padding:8px 10px;
-    border-radius:10px;
-    background:#0e1a2a;
-    border:1px solid #224064;
-    color:#cfe5ff;
-    font-size:12px;
+    margin-top:8px;padding:8px 10px;border-radius:10px;background:#0e1a2a;border:1px solid #224064;
+    color:#cfe5ff;font-size:12px;
   }
 
+  /* Modals (unchanged structurally, refreshed palette) */
   .modal{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.6);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding:16px;
-    z-index:9999;
+    position:fixed;inset:0;background:rgba(0,0,0,.6);
+    display:none;align-items:center;justify-content:center;padding:16px;z-index:9999;
   }
   .modal .box{
-    background:#0e1320;
-    border:1px solid #2a3a55;
-    border-radius:12px;
-    max-width:520px;
-    width:100%;
-    padding:12px;
+    background:#0e1320;border:1px solid #2a3a55;border-radius:12px;max-width:520px;width:100%;padding:12px;
   }
   .modal textarea{
-    width:100%;
-    height:220px;
-    background:#0b1220;
-    color:#e8ecf1;
-    border:1px solid #243248;
-    border-radius:10px;
-    padding:8px;
-    font-size:14px;
+    width:100%;height:220px;background:#0b1220;color:#e8ecf1;border:1px solid #243248;border-radius:10px;padding:8px;font-size:14px;
   }
   .rowbtn{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
-  .mini{font-size:11px;color:#a6b3c2}
-
-  .pickerGrid{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:8px;
-    margin-top:8px;
-  }
+  .pickerGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
   .pickerBtn{
-    background:#152033;
-    border:1px solid #2a3c5a;
-    border-radius:10px;
-    padding:12px 8px;
-    text-align:center;
-    font-weight:800;
-    cursor:pointer;
-    user-select:none;
+    background:#152033;border:1px solid #2a3c5a;border-radius:10px;padding:12px 8px;text-align:center;font-weight:800;cursor:pointer;user-select:none;
   }
-  .pickerBtn.selected{
-    outline:2px solid var(--accent);
-    background:#13243b;
-  }
+  .pickerBtn.selected{outline:2px solid var(--accent);background:#13243b}
 
   .undoList{max-height:300px;overflow:auto;margin-top:6px}
   .undoRow{
-    background:#10182a;
-    border:1px solid #22324a;
-    border-radius:10px;
-    padding:10px;
-    margin-bottom:8px;
-    cursor:pointer;
+    background:#10182a;border:1px solid #22324a;border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;
   }
   .undoRow:active{transform:scale(.99)}
 
   .toast{
-    position:fixed;
-    left:50%;
-    transform:translateX(-50%);
-    bottom:18px;
-    background:#0f1e32;
-    border:1px solid #274468;
-    color:#d9ecff;
-    padding:10px 12px;
-    border-radius:12px;
-    font-size:13px;
-    display:none;
-    z-index:10000;
+    position:fixed;left:50%;transform:translateX(-50%);bottom:70px;
+    background:#0f1e32;border:1px solid #274468;color:#d9ecff;padding:10px 12px;border-radius:12px;font-size:13px;display:none;z-index:10000;
   }
   .toast button{margin-left:8px}
 
   table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #233044;padding:6px 8px;font-size:12px}
+  th,td{border:1px solid var(--border);padding:6px 8px;font-size:12px}
   th{background:#0f1a28;color:#cfe5ff;text-align:left}
-
-  /* Debug panel */
-  .debugCard .line{font-size:12px;color:#b8c8dc;margin-top:4px;word-break:break-word}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>Team Tracker</h1>
-    <div class="inlineRow">
-      <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.6.3</div>
+<div class="appbar">
+  <div class="appbar-inner">
+    <div class="appbar-row">
+      <div class="app-title">
+        <h1>Team Tracker</h1>
+        <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
+      </div>
+      <div class="badges">
+        <span class="badge">GF <span id="liveGF">0</span></span>
+        <span class="badge">GA <span id="liveGA">0</span></span>
+      </div>
     </div>
-  </header>
-
-  <!-- Floating scoreboard -->
-  <div class="livebar">
-    <div class="livebar-main">
-      <div>GF: <span id="liveGF">0</span></div>
-      <div>Scoreboard</div>
-      <div>GA: <span id="liveGA">0</span></div>
-    </div>
-    <div class="livebar-sub">
-      <div>Shots For: <span id="liveSF">0</span></div>
-      <div>Shots Against: <span id="liveSA">0</span></div>
+    <div class="appbar-row" style="margin-top:2px">
+      <div class="app-meta">
+        <span id="metaOpponent">New game</span> • <span id="metaLevel">U11</span> • <span id="metaDate"></span> • v3.7.0
+      </div>
+      <div class="app-shots">SF <span id="liveSF">0</span> | SA <span id="liveSA">0</span></div>
     </div>
   </div>
+</div>
 
+<div class="wrap">
   <!-- Setup -->
   <section class="panel" id="setupPanel">
     <div class="row">
@@ -356,9 +261,9 @@
       <div class="col">
         <label>Current Period</label>
         <div class="periods" id="periodChips">
-          <div class="chip active" data-p="1" role="button" aria-pressed="true">1</div>
-          <div class="chip" data-p="2" role="button" aria-pressed="false">2</div>
-          <div class="chip" data-p="3" role="button" aria-pressed="false">3</div>
+          <div class="chip active" data-p="1" role="button" aria-pressed="true">P1</div>
+          <div class="chip" data-p="2" role="button" aria-pressed="false">P2</div>
+          <div class="chip" data-p="3" role="button" aria-pressed="false">P3</div>
           <div class="chip" data-p="4" role="button" aria-pressed="false">OT</div>
         </div>
       </div>
@@ -369,65 +274,123 @@
 
   <!-- Main Controls -->
   <section class="panel">
-    <div class="grid">
-      <!-- Row 1 -->
-      <button class="btn shot" id="btnShot" type="button">Shot (Saved)</button>
-      <button class="btn big" id="btnBigSave" type="button">Big Save</button>
-      <!-- Row 2 -->
-      <button class="btn goal" id="btnGoal" type="button">Goal</button>
-      <button class="btn soft" id="btnSoftGoal" type="button">Soft Goal</button>
-      <!-- Row 3 -->
-      <button class="btn smother" id="btnSmother" type="button">Smother</button>
-      <button class="btn bad" id="btnBadRebound" type="button">Bad Rebound</button>
-      <!-- Row 4 -->
-      <button class="btn" id="btnForShot" type="button">Our Shot</button>
-      <button class="btn" id="btnForGoal" type="button">Our Goal</button>
+    <div class="grid" id="actionGrid">
+      <!-- Row 1 (Against: high priority) -->
+      <button class="btn shot" id="btnShot" type="button">
+        Shot Against
+        <span class="sem">AG</span>
+      </button>
+      <button class="btn big" id="btnBigSave" type="button">
+        Big Save
+        <span class="sem">GS</span>
+      </button>
+      <!-- Row 2 (Goals against) -->
+      <button class="btn goal" id="btnGoal" type="button">
+        Goal
+        <span class="sem">GA</span>
+      </button>
+      <button class="btn soft" id="btnSoftGoal" type="button">
+        Soft Goal
+        <span class="sem">SG</span>
+      </button>
+      <!-- Row 3 (Rebound control) -->
+      <button class="btn smother" id="btnSmother" type="button">
+        Smother
+        <span class="sem">RC</span>
+      </button>
+      <button class="btn badreb" id="btnBadRebound" type="button">
+        Bad Rebound
+        <span class="sem">RB</span>
+      </button>
+      <!-- Row 4 (For) -->
+      <button class="btn teambtn" id="btnForShot" type="button">
+        Our Shot
+        <span class="sem">SF</span>
+      </button>
+      <button class="btn teambtn" id="btnForGoal" type="button">
+        Our Goal
+        <span class="sem">GF</span>
+      </button>
       <!-- Row 5 (team misc) -->
-      <button class="btn team" id="btnBreakaway" type="button">Breakaway Against</button>
-      <button class="btn team" id="btnDZTurnover" type="button">D-Zone Turnover</button>
-      <!-- Row 6 -->
-      <button class="btn undo" id="btnUndo" type="button" title="Tap: undo last • Long-press: choose from last 5">Undo</button>
-      <button class="btn period" id="btnNextPeriod" type="button">Next Period</button>
+      <button class="btn teambtn" id="btnBreakaway" type="button">
+        Breakaway Against
+        <span class="sem">BA</span>
+      </button>
+      <button class="btn teambtn" id="btnDZTurnover" type="button">
+        D-Zone Turnover
+        <span class="sem">DZ</span>
+      </button>
     </div>
 
-    <!-- Centered live Goalie/Team scores -->
+    <!-- Split Goalie/Team scores with arcs -->
     <div class="scoresRow" id="scoresRow">
-      <div class="scoreBox">
-        <h3>Goalie Score</h3>
-        <div class="val" id="gsLive">—</div>
-      </div>
-      <div class="scoreBox">
-        <h3>Team Score</h3>
-        <div class="val" id="tsLive">—</div>
+      <div class="scoreSplit">
+        <div class="scorePane">
+          <svg class="arc" viewBox="0 0 44 44" aria-hidden="true">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"></circle>
+            <circle id="gsArc" cx="22" cy="22" r="18" fill="none" stroke="currentColor" stroke-width="6"
+              stroke-linecap="round" transform="rotate(-90 22 22)"
+              stroke-dasharray="113.097" stroke-dashoffset="113.097"></circle>
+          </svg>
+          <div>
+            <h3>Goalie</h3>
+            <div class="num" id="gsLive">—</div>
+          </div>
+        </div>
+        <div class="scorePane">
+          <svg class="arc" viewBox="0 0 44 44" aria-hidden="true">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"></circle>
+            <circle id="tsArc" cx="22" cy="22" r="18" fill="none" stroke="currentColor" stroke-width="6"
+              stroke-linecap="round" transform="rotate(-90 22 22)"
+              stroke-dasharray="113.097" stroke-dashoffset="113.097"></circle>
+          </svg>
+          <div>
+            <h3>Team</h3>
+            <div class="num" id="tsLive">—</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Stats (supporting metrics) -->
+    <!-- Stats (supporting metrics, reordered by in-game relevance) -->
     <div class="stats" id="stats">
       <div class="card"><h3>Saves</h3><div class="val" id="savesVal">0</div></div>
       <div class="card"><h3>Save %</h3><div class="val" id="svVal">—</div></div>
+      <div class="card"><h3>Big Saves</h3><div class="val" id="bigVal">0</div></div>
       <div class="card"><h3>Smothers</h3><div class="val" id="smotherVal">0</div></div>
       <div class="card"><h3>Bad Rebounds</h3><div class="val" id="brVal">0</div></div>
-      <div class="card"><h3>Big Saves</h3><div class="val" id="bigVal">0</div></div>
       <div class="card"><h3>Our Shooting %</h3><div class="val" id="shootVal">—</div></div>
       <div class="card"><h3>Shot Share</h3><div class="val" id="ssVal">—</div></div>
       <div class="card"><h3>Breakaways Ag.</h3><div class="val" id="baVal">0</div></div>
       <div class="card"><h3>D-Zone TO</h3><div class="val" id="dzVal">0</div></div>
     </div>
 
-    <!-- Debug: concise, always visible -->
-    <div class="card debugCard" id="debugCard" style="margin-top:8px;">
-      <h3>Live Debug</h3>
-      <div class="line" id="debugGoalieLine">Goalie: —</div>
-      <div class="line" id="debugTeamLine">Team: —</div>
+    <!-- Debug (collapsible) -->
+    <div class="collapsible card" id="debugWrap" style="margin-top:8px;">
+      <header id="debugToggler">
+        <h3 style="margin:0;font-size:12px;color:var(--muted)">Live Debug</h3>
+        <span class="chev" id="debugChev">▸</span>
+      </header>
+      <div class="content">
+        <div class="line" id="debugGoalieLine" style="font-size:12px;color:#b8c8dc;margin-top:6px;word-break:break-word">Goalie: —</div>
+        <div class="line" id="debugTeamLine" style="font-size:12px;color:#b8c8dc;margin-top:4px;word-break:break-word">Team: —</div>
+      </div>
     </div>
 
     <div class="pgrid" id="periodSummary"></div>
-    <div class="log" id="log"></div>
 
-    <div class="foot-actions">
-      <button class="btn end" id="btnEnd" type="button">End Game & Score</button>
-      <button class="btn undo" id="btnReset" type="button">New Game</button>
+    <!-- Log (collapsible) -->
+    <div class="collapsible card" id="logWrap" style="margin-top:8px;">
+      <header id="logToggler">
+        <h3 style="margin:0;font-size:12px;color:var(--muted)">Event Log</h3>
+        <span class="chev" id="logChev">▸</span>
+      </header>
+      <div class="content log" id="log"></div>
+    </div>
+
+    <div class="foot-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <button class="btn" id="btnEnd" type="button">End Game & Score</button>
+      <button class="btn" id="btnReset" type="button">New Game</button>
     </div>
 
     <div class="row" style="margin-top:10px;gap:10px;">
@@ -469,6 +432,12 @@
   </section>
 </div>
 
+<!-- Floating Undo / Next Period -->
+<div class="float-actions">
+  <button class="float-btn" id="btnUndo" type="button" title="Tap: undo last • Long-press: choose from last 5">Undo</button>
+  <button class="float-btn" id="btnNextPeriod" type="button">Next Period</button>
+</div>
+
 <!-- Copy modal -->
 <div class="modal" id="copyModal" role="dialog" aria-modal="true" aria-labelledby="copyTitle">
   <div class="box">
@@ -476,7 +445,7 @@
     <textarea id="copyArea"></textarea>
     <div class="rowbtn">
       <button class="btn" id="btnCopySelect">Select All</button>
-      <button class="btn undo" id="btnCopyClose">Close</button>
+      <button class="btn" id="btnCopyClose">Close</button>
     </div>
   </div>
 </div>
@@ -488,7 +457,7 @@
     <textarea id="rosterArea" placeholder="e.g.&#10;1&#10;3&#10;7&#10;9&#10;12"></textarea>
     <div class="rowbtn">
       <button class="btn" id="btnRosterSave">Save</button>
-      <button class="btn undo" id="btnRosterClose">Close</button>
+      <button class="btn" id="btnRosterClose">Close</button>
     </div>
   </div>
 </div>
@@ -496,18 +465,15 @@
 <!-- Player picker (single) -->
 <div class="modal" id="pickerModal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
   <div class="box">
-    <div class="inlineRow" style="justify-content:space-between;">
+    <div class="row" style="justify-content:space-between;align-items:center;margin:0;">
       <div id="pickerTitle" class="small">Select player number</div>
       <div class="small">Tap to choose • or type</div>
     </div>
     <div class="pickerGrid" id="pickerGrid"></div>
-    <div class="inlineRow" style="margin-top:8px;">
+    <div class="row" style="margin-top:8px;gap:8px;">
       <input id="pickerInput" placeholder="Type number…" inputmode="numeric" style="flex:1;padding:10px;border-radius:10px;border:1px solid #2a3444;background:#0f1624;color:#e8ecf1">
       <button class="btn" id="pickerAdd">Use</button>
-    </div>
-    <div class="rowbtn" style="margin-top:8px;">
       <button class="btn" id="pickerUnknown">Unknown</button>
-      <button class="btn undo" id="pickerCancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -518,7 +484,7 @@
     <div id="gaTitle" class="small">Goal Against — pick context</div>
     <div class="pickerGrid" id="gaGrid" style="grid-template-columns:repeat(2,1fr)"></div>
     <div class="rowbtn" style="margin-top:8px;">
-      <button class="btn undo" id="gaSkip">Skip</button>
+      <button class="btn" id="gaSkip">Skip</button>
     </div>
   </div>
 </div>
@@ -526,7 +492,7 @@
 <!-- Multi picker (on-ice / for-on-ice) -->
 <div class="modal" id="onIceModal" role="dialog" aria-modal="true" aria-labelledby="onIceTitle">
   <div class="box">
-    <div class="inlineRow" style="justify-content:space-between;">
+    <div class="row" style="justify-content:space-between;align-items:center;margin:0;">
       <div id="onIceTitle" class="small">Select players on ice</div>
       <div class="small"><span id="onIceCount">0</span>/<span id="onIceMax">5</span> selected</div>
     </div>
@@ -536,7 +502,7 @@
       <button class="btn" id="onIceUnknownMinus">Unknown −</button>
       <button class="btn" id="onIceClear">Clear</button>
       <button class="btn" id="onIceUse">Use</button>
-      <button class="btn undo" id="onIceCancel">Skip</button>
+      <button class="btn" id="onIceCancel">Skip</button>
     </div>
     <div class="small" id="onIceUnknownBadge" style="margin-top:6px;">Unknown ×0</div>
   </div>
@@ -552,7 +518,7 @@
       <div class="pickerBtn" data-strength="SH">Short Handed (SH)</div>
     </div>
     <div class="rowbtn" style="margin-top:8px;">
-      <button class="btn undo" id="strengthSkip">Skip</button>
+      <button class="btn" id="strengthSkip">Skip</button>
     </div>
   </div>
 </div>
@@ -563,7 +529,7 @@
     <div id="undoTitle" class="small">Remove an event (tap a row)</div>
     <div class="undoList" id="undoList"></div>
     <div class="rowbtn">
-      <button class="btn undo" id="undoClose">Cancel</button>
+      <button class="btn" id="undoClose">Cancel</button>
     </div>
   </div>
 </div>
@@ -572,10 +538,10 @@
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3605'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3700'));
 }
 
-/* ===== IndexedDB KV helper ===== */
+/* ===== IndexedDB KV helper (unchanged) ===== */
 const idbKV = (() => {
   let dbp;
   function db(){
@@ -611,11 +577,10 @@ const $ = id => document.getElementById(id);
 const SAVE_KEY = 'team-tracker-state';
 const ROSTER_KEY = 'team-tracker-roster';
 
-/* ===== State ===== */
+/* ===== State (copied from your build) ===== */
 const state = {
   opponent:'', level:'U11', date:null, period:1,
   startedAt:new Date().toISOString(), gameId:Math.random().toString(36).slice(2),
-  // Events: {id,type,tISO,period,player?,assist?,ga_ctx?,ga_cause?,ga_ba?,ga_dz?,ga_br?,strength?,goodRebound?,onIce?,forOnIce?}
   events:[],
   countsA:{shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0},
   countsF:{shots:0, goals:0},
@@ -680,7 +645,7 @@ function compressUnknown(arr){
   return unknowns ? [...rest, `Unknown×${unknowns}`] : rest;
 }
 
-/* ===== Event accounting ===== */
+/* ===== Event accounting (unchanged) ===== */
 function bump(type, period){
   const p = per[period] || per[4];
   if(type==='shot'){
@@ -751,31 +716,18 @@ function clearGoodPendingFor(id){
 
 /* ===== Add / Undo ===== */
 function addEvent(type, meta={}){
-  const ev = {
-    id: ++state.lastEventId,
-    type,
-    tISO:new Date().toISOString(),
-    period: state.period,
-    ...meta
-  };
-
+  const ev = { id: ++state.lastEventId, type, tISO:new Date().toISOString(), period: state.period, ...meta };
   state.events.push(ev);
   bump(type, state.period);
 
-  if (type === 'goal' || type === 'soft_goal') {
-    tagGACause(ev); // tag cause before render
-  }
+  if (type === 'goal' || type === 'soft_goal') tagGACause(ev);
 
   save();
   renderAll();
   vibrate();
 
-  if (type === 'shot' || type === 'big_save') {
-    scheduleGoodReboundCredit(ev.id);
-  }
-  if (type === 'goal' || type === 'soft_goal') {
-    openGAContext(ev);
-  }
+  if (type === 'shot' || type === 'big_save') scheduleGoodReboundCredit(ev.id);
+  if (type === 'goal' || type === 'soft_goal') openGAContext(ev);
 
   return ev;
 }
@@ -788,74 +740,38 @@ function undo(){
 }
 function revert(ev){
   clearGoodPendingFor(ev.id);
-
   const p = per[ev.period] || per[4];
-  if(ev.type==='shot'){
-    state.countsA.shots--; p.A_shots--;
-  }else if(ev.type==='goal'){
-    state.countsA.shots--; state.countsA.goals--;
-    p.A_shots--; p.A_goals--;
-  }else if(ev.type==='soft_goal'){
-    state.countsA.shots--; state.countsA.goals--; state.countsA.softGoals--;
-    p.A_shots--; p.A_goals--;
-  }else if(ev.type==='smother'){
-    state.countsA.smothers--; p.A_smothers--;
-  }else if(ev.type==='bad_rebound'){
-    state.countsA.shots--; state.countsA.badRebounds--;
-    p.A_shots--; p.A_badRebounds--;
-  }else if(ev.type==='big_save'){
-    state.countsA.bigSaves--; state.countsA.shots--;
-    p.A_bigSaves--; p.A_shots--;
-  }else if(ev.type==='for_shot'){
-    state.countsF.shots--; p.F_shots--;
-  }else if(ev.type==='for_goal'){
-    state.countsF.shots--; state.countsF.goals--;
-    p.F_shots--; p.F_goals--;
-  }else if(ev.type==='breakaway_against'){
-    state.team.breakawaysAgainst--; p.BA--;
-  }else if(ev.type==='dz_turnover'){
-    state.team.dzTurnovers--; p.DZ--;
-  }
+  if(ev.type==='shot'){ state.countsA.shots--; p.A_shots--; }
+  else if(ev.type==='goal'){ state.countsA.shots--; state.countsA.goals--; p.A_shots--; p.A_goals--; }
+  else if(ev.type==='soft_goal'){ state.countsA.shots--; state.countsA.goals--; state.countsA.softGoals--; p.A_shots--; p.A_goals--; }
+  else if(ev.type==='smother'){ state.countsA.smothers--; p.A_smothers--; }
+  else if(ev.type==='bad_rebound'){ state.countsA.shots--; state.countsA.badRebounds--; p.A_shots--; p.A_badRebounds--; }
+  else if(ev.type==='big_save'){ state.countsA.bigSaves--; state.countsA.shots--; p.A_bigSaves--; p.A_shots--; }
+  else if(ev.type==='for_shot'){ state.countsF.shots--; p.F_shots--; }
+  else if(ev.type==='for_goal'){ state.countsF.shots--; state.countsF.goals--; p.F_shots--; p.F_goals--; }
+  else if(ev.type==='breakaway_against'){ state.team.breakawaysAgainst--; p.BA--; }
+  else if(ev.type==='dz_turnover'){ state.team.dzTurnovers--; p.DZ--; }
   save();
 }
 
 /* ===== Undo interactions (pointer-safe) ===== */
-let undoHoldTimer = null;
-let undoHeld = false;
-let undoPointerActive = false;
-
+let undoHoldTimer = null, undoHeld = false, undoPointerActive = false;
 function startUndoHold(){
   if (undoPointerActive) return;
-  undoPointerActive = true;
-  undoHeld = false;
-
-  undoHoldTimer = setTimeout(() => {
-    undoHeld = true;
-    showUndoModal();
-  }, 600);
+  undoPointerActive = true; undoHeld = false;
+  undoHoldTimer = setTimeout(() => { undoHeld = true; showUndoModal(); }, 600);
 }
 function finishUndo(){
   if (!undoPointerActive) return;
   undoPointerActive = false;
-
-  if (undoHoldTimer){
-    clearTimeout(undoHoldTimer);
-    undoHoldTimer = null;
-  }
-  if (!undoHeld){
-    undo();
-  }
+  if (undoHoldTimer){ clearTimeout(undoHoldTimer); undoHoldTimer = null; }
+  if (!undoHeld){ undo(); }
 }
 function cancelUndoHold(){
   if (!undoPointerActive) return;
   undoPointerActive = false;
-
-  if (undoHoldTimer){
-    clearTimeout(undoHoldTimer);
-    undoHoldTimer = null;
-  }
+  if (undoHoldTimer){ clearTimeout(undoHoldTimer); undoHoldTimer = null; }
 }
-
 const undoBtn = $('btnUndo');
 undoBtn.addEventListener('pointerdown', startUndoHold);
 undoBtn.addEventListener('pointerup', finishUndo);
@@ -864,7 +780,6 @@ undoBtn.addEventListener('pointercancel', cancelUndoHold);
 
 /* ===== Undo modal & toast ===== */
 let lastRemoved = null;
-
 function showUndoModal(){
   const listEl = $('undoList');
   const recent = state.events.slice(-5);
@@ -872,62 +787,32 @@ function showUndoModal(){
     listEl.innerHTML = `<div class="small">No events to remove.</div>`;
   } else {
     listEl.innerHTML = recent
-      .map(ev => {
-        const label = labelFor(ev);
-        return `<div class="undoRow" data-id="${ev.id}">
-          P${ev.period} • ${fmtTime(ev.tISO)} — ${label}
-        </div>`;
-      })
+      .map(ev => `<div class="undoRow" data-id="${ev.id}">P${ev.period} • ${fmtTime(ev.tISO)} — ${labelFor(ev)}</div>`)
       .reverse()
       .join('');
   }
   $('undoModal').style.display = 'flex';
 }
-
 $('undoList').addEventListener('click', e => {
-  const row = e.target.closest('.undoRow');
-  if (!row) return;
+  const row = e.target.closest('.undoRow'); if (!row) return;
   const id = Number(row.dataset.id);
   const idx = state.events.findIndex(ev => ev.id === id);
   if (idx === -1) return;
-
   const [ev] = state.events.splice(idx, 1);
-  revert(ev);
-  lastRemoved = ev;
-
+  revert(ev); lastRemoved = ev;
   $('undoModal').style.display = 'none';
   showToast('Removed.');
   renderAll();
 });
-
-$('undoClose').addEventListener('click', () => {
-  $('undoModal').style.display = 'none';
-});
-
-function showToast(msg){
-  const t = $('toast');
-  t.firstChild.nodeValue = msg + ' ';
-  t.style.display = 'block';
-}
-function hideToast(){
-  $('toast').style.display = 'none';
-}
-
+$('undoClose').addEventListener('click', () => { $('undoModal').style.display = 'none'; });
+function showToast(msg){ const t = $('toast'); t.firstChild.nodeValue = msg + ' '; t.style.display = 'block'; }
+function hideToast(){ $('toast').style.display = 'none'; }
 $('toastRestore').addEventListener('click', () => {
-  if (!lastRemoved) {
-    hideToast();
-    return;
-  }
-  const ev = lastRemoved;
-  lastRemoved = null;
-
-  // Restore into correct chronological position
+  if (!lastRemoved) { hideToast(); return; }
+  const ev = lastRemoved; lastRemoved = null;
   state.events.push(ev);
   state.events.sort((a,b)=>new Date(a.tISO) - new Date(b.tISO));
-  rebuildFromEvents();
-  save();
-  renderAll();
-  hideToast();
+  rebuildFromEvents(); save(); renderAll(); hideToast();
 });
 
 /* ===== Labels ===== */
@@ -940,42 +825,31 @@ function labelFor(ev){
     .replace('breakaway_against','Breakaway Against')
     .replace('dz_turnover','D-Zone Turnover')
     .replace(/_/g,' ');
-
   if ((ev.type === 'for_shot' || ev.type === 'for_goal') && ev.player){
-    if (ev.player !== 'Unknown' && ev.player !== '?') {
-      label += ` (#${ev.player})`;
-    }
+    if (ev.player !== 'Unknown' && ev.player !== '?') label += ` (#${ev.player})`;
   }
   if (ev.type === 'for_goal' && ev.assist){
-    if (ev.assist === 'None' || ev.assist === 'Unknown'){
-      label += ' A:—';
-    } else {
-      label += ` A:#${ev.assist}`;
-    }
+    if (ev.assist === 'None' || ev.assist === 'Unknown') label += ' A:—';
+    else label += ` A:#${ev.assist}`;
   }
   if (ev.type === 'for_goal' && Array.isArray(ev.forOnIce) && ev.forOnIce.length){
     label += ` [For on-ice: ${compressUnknown(ev.forOnIce).join(', ')}]`;
   }
-  if ((ev.type === 'goal' || ev.type === 'soft_goal') &&
-      Array.isArray(ev.onIce) && ev.onIce.length){
+  if ((ev.type === 'goal' || ev.type === 'soft_goal') && Array.isArray(ev.onIce) && ev.onIce.length){
     label += ` [On-ice: ${compressUnknown(ev.onIce).join(', ')}]`;
   }
-  if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
-      ev.strength && ev.strength !== 'EV') {
+  if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') && ev.strength && ev.strength !== 'EV') {
     label += ` [${ev.strength}]`;
   }
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_ctx){
     label += ` {${ev.ga_ctx}}`;
   }
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_cause){
-    const parts = String(ev.ga_cause).split('+');
-    const causes = [];
+    const parts = String(ev.ga_cause).split('+'); const causes = [];
     if (parts.includes('BA')) causes.push('Breakaway');
     if (parts.includes('DZ')) causes.push('Turnover');
     if (parts.includes('BR')) causes.push('Bad Rebound');
-    if (causes.length){
-      label += ` <${causes.join('/')}>`;
-    }
+    if (causes.length) label += ` <${causes.join('/')}>`;
   }
   return label;
 }
@@ -983,7 +857,6 @@ function labelFor(ev){
 /* ===== GA context & cause flags ===== */
 const GA_TAGS = ['Screen','Deflection','Cross-Crease Pass','Weak-Side Play','Rush','Rebound','Other'];
 let lastGAEvent = null;
-
 function openGAContext(ev){
   lastGAEvent = ev;
   $('gaGrid').innerHTML = GA_TAGS.map(t=>`<div class="pickerBtn" data-t="${t}">${t}</div>`).join('');
@@ -991,41 +864,22 @@ function openGAContext(ev){
 }
 $('gaGrid').addEventListener('click', e=>{
   const chip = e.target.closest('.pickerBtn'); if (!chip || !lastGAEvent) return;
-  lastGAEvent.ga_ctx = chip.dataset.t;
-  save();
-  $('gaOverlay').style.display = 'none';
-  renderAll();
-  openMultiPicker({
-    title: 'Select FIVE players on ice (GA)',
-    max: 5,
-    event: lastGAEvent,
-    field: 'onIce',
-    exclude: []
-  });
+  lastGAEvent.ga_ctx = chip.dataset.t; save();
+  $('gaOverlay').style.display = 'none'; renderAll();
+  openMultiPicker({ title:'Select FIVE players on ice (GA)', max:5, event:lastGAEvent, field:'onIce', exclude:[] });
   lastGAEvent = null;
 });
 $('gaSkip').addEventListener('click', ()=>{
   $('gaOverlay').style.display='none';
   if(lastGAEvent){
-    openMultiPicker({
-      title:'Select FIVE players on ice (GA)',
-      max:5,
-      event:lastGAEvent,
-      field:'onIce',
-      exclude:[]
-    });
+    openMultiPicker({ title:'Select FIVE players on ice (GA)', max:5, event:lastGAEvent, field:'onIce', exclude:[] });
     lastGAEvent = null;
   }
 });
-
 function tagGACause(gaEv){
   const tGA = new Date(gaEv.tISO).getTime();
   const lookback = tGA - 10000;
-
-  let hasBA = false;
-  let hasDZ = false;
-  let hasBR = false;
-
+  let hasBA = false, hasDZ = false, hasBR = false;
   for (const ev of state.events){
     const t = new Date(ev.tISO).getTime();
     if (t < lookback || t > tGA) continue;
@@ -1033,34 +887,18 @@ function tagGACause(gaEv){
     if (ev.type === 'dz_turnover') hasDZ = true;
     if (ev.type === 'bad_rebound') hasBR = true;
   }
-
   const parts = [];
   if (hasBA) parts.push('BA');
   if (hasDZ) parts.push('DZ');
   if (hasBR) parts.push('BR');
-
   gaEv.ga_cause = parts.length ? parts.join('+') : 'other';
   save();
 }
 
 /* ===== Generic Multi Picker ===== */
-let multiPick = {
-  selected: new Set(),
-  unknowns: 0,
-  max: 5,
-  exclude: new Set(),
-  eventRef: null,
-  field: 'onIce'
-};
+let multiPick = { selected:new Set(), unknowns:0, max:5, exclude:new Set(), eventRef:null, field:'onIce' };
 function openMultiPicker({title, max, event, field, exclude}){
-  multiPick = {
-    selected:new Set(),
-    unknowns:0,
-    max,
-    exclude:new Set(exclude||[]),
-    eventRef:event,
-    field
-  };
+  multiPick = { selected:new Set(), unknowns:0, max, exclude:new Set(exclude||[]), eventRef:event, field };
   $('onIceTitle').textContent = title;
   $('onIceMax').textContent = String(max);
   $('onIceModal').style.display='flex';
@@ -1072,12 +910,9 @@ function buildOnIceGrid(){
   const uniq = Array.from(new Set(roster))
     .filter(n=>!multiPick.exclude.has(n))
     .sort((a,b)=>{
-      const na=+a, nb=+b;
-      const an=isNaN(na), bn=isNaN(nb);
+      const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
       if(an&&bn) return (''+a).localeCompare(''+b);
-      if(an) return 1;
-      if(bn) return -1;
-      return na-nb;
+      if(an) return 1; if(bn) return -1; return na-nb;
     });
   $('onIceGrid').innerHTML = uniq.length
     ? uniq.map(n=>`<div class="pickerBtn ${multiPick.selected.has(n)?'selected':''}" data-n="${n}">#${n}</div>`).join('')
@@ -1091,59 +926,24 @@ function updateOnIceMeta(){
 $('onIceGrid').addEventListener('click', e=>{
   const b = e.target.closest('.pickerBtn'); if(!b) return;
   const n = b.dataset.n;
-  if(multiPick.selected.has(n)){
-    multiPick.selected.delete(n);
-    b.classList.remove('selected');
-  }else{
-    if(totalSelected()>=multiPick.max) return;
-    multiPick.selected.add(n);
-    b.classList.add('selected');
-  }
+  if(multiPick.selected.has(n)){ multiPick.selected.delete(n); b.classList.remove('selected'); }
+  else { if(totalSelected()>=multiPick.max) return; multiPick.selected.add(n); b.classList.add('selected'); }
   updateOnIceMeta();
 });
-$('onIceUnknownPlus').addEventListener('click', ()=>{
-  if(totalSelected()>=multiPick.max) return;
-  multiPick.unknowns += 1;
-  updateOnIceMeta();
-});
-$('onIceUnknownMinus').addEventListener('click', ()=>{
-  if(multiPick.unknowns>0){
-    multiPick.unknowns -= 1;
-    updateOnIceMeta();
-  }
-});
-$('onIceClear').addEventListener('click', ()=>{
-  multiPick.selected.clear();
-  multiPick.unknowns = 0;
-  buildOnIceGrid();
-  updateOnIceMeta();
-});
+$('onIceUnknownPlus').addEventListener('click', ()=>{ if(totalSelected()<multiPick.max){ multiPick.unknowns += 1; updateOnIceMeta(); } });
+$('onIceUnknownMinus').addEventListener('click', ()=>{ if(multiPick.unknowns>0){ multiPick.unknowns -= 1; updateOnIceMeta(); } });
+$('onIceClear').addEventListener('click', ()=>{ multiPick.selected.clear(); multiPick.unknowns = 0; buildOnIceGrid(); updateOnIceMeta(); });
 $('onIceUse').addEventListener('click', ()=>{
-  if (!multiPick.eventRef) {
-    $('onIceModal').style.display = 'none';
-    return;
-  }
+  if (!multiPick.eventRef) { $('onIceModal').style.display = 'none'; return; }
   const ev = multiPick.eventRef;
-  const arr = [...multiPick.selected];
-  for (let i = 0; i < multiPick.unknowns; i++) arr.push('Unknown');
-  ev[multiPick.field] = arr;
-  save();
-  $('onIceModal').style.display = 'none';
-  multiPick.eventRef = null;
-  renderAll();
-
-  if (ev.type === 'goal' || ev.type === 'soft_goal') {
-    openStrengthPicker(ev, 'Goal Against — PP/SH (optional)');
-  } else if (ev.type === 'for_goal') {
-    openStrengthPicker(ev, 'Our Goal — PP/SH (optional)');
-  }
+  const arr = [...multiPick.selected]; for (let i = 0; i < multiPick.unknowns; i++) arr.push('Unknown');
+  ev[multiPick.field] = arr; save(); $('onIceModal').style.display = 'none'; multiPick.eventRef = null; renderAll();
+  if (ev.type === 'goal' || ev.type === 'soft_goal') openStrengthPicker(ev, 'Goal Against — PP/SH (optional)');
+  else if (ev.type === 'for_goal') openStrengthPicker(ev, 'Our Goal — PP/SH (optional)');
 });
-$('onIceCancel').addEventListener('click', ()=>{
-  $('onIceModal').style.display='none';
-  multiPick.eventRef = null;
-});
+$('onIceCancel').addEventListener('click', ()=>{ $('onIceModal').style.display='none'; multiPick.eventRef=null; });
 
-/* ===== Strength Picker (PP/SH/EV, optional) ===== */
+/* ===== Strength Picker ===== */
 let strengthTarget = null;
 function openStrengthPicker(ev, label){
   strengthTarget = ev;
@@ -1151,85 +951,50 @@ function openStrengthPicker(ev, label){
   $('strengthModal').style.display='flex';
 }
 document.querySelector('#strengthModal .pickerGrid').addEventListener('click', e=>{
-  const btn = e.target.closest('.pickerBtn');
-  if(!btn || !strengthTarget) return;
+  const btn = e.target.closest('.pickerBtn'); if(!btn || !strengthTarget) return;
   const val = btn.dataset.strength;
-  if(val === 'EV') strengthTarget.strength = 'EV';
-  else if(val === 'PP') strengthTarget.strength = 'PP';
-  else if(val === 'SH') strengthTarget.strength = 'SH';
-  save();
-  $('strengthModal').style.display='none';
-  strengthTarget = null;
+  strengthTarget.strength = (val==='EV'?'EV':val==='PP'?'PP':'SH');
+  save(); $('strengthModal').style.display='none'; strengthTarget = null;
 });
-$('strengthSkip').addEventListener('click', ()=>{
-  $('strengthModal').style.display='none';
-  strengthTarget = null;
-});
+$('strengthSkip').addEventListener('click', ()=>{ $('strengthModal').style.display='none'; strengthTarget = null; });
 
-/* ===== Plus/Minus ===== */
+/* ===== Plus/Minus & per-player tallies (unchanged) ===== */
 function computePlusMinus(){
   const pm = new Map();
-  function inc(n, delta){
-    if(n==='Unknown' || n==='?' || !n) return;
-    pm.set(n, (pm.get(n)||0) + delta);
-  }
+  function inc(n, delta){ if(n==='Unknown' || n==='?' || !n) return; pm.set(n, (pm.get(n)||0) + delta); }
   for(const ev of state.events){
     if(ev.type==='for_goal'){
       const set = new Set();
       if(ev.player && ev.player!=='?' && ev.player!=='Unknown') set.add(ev.player);
       if(ev.assist && ev.assist!=='None' && ev.assist!=='Unknown' && ev.assist!=='?') set.add(ev.assist);
-      if(Array.isArray(ev.forOnIce)){
-        for(const p of ev.forOnIce){ if(p!=='Unknown') set.add(p); }
-      }
+      if(Array.isArray(ev.forOnIce)){ for(const p of ev.forOnIce){ if(p!=='Unknown') set.add(p); } }
       for(const n of set) inc(n, +1);
     }
     if(ev.type==='goal' || ev.type==='soft_goal'){
-      if(Array.isArray(ev.onIce)){
-        for(const n of ev.onIce){ if(n!=='Unknown') inc(n, -1); }
-      }
+      if(Array.isArray(ev.onIce)){ for(const n of ev.onIce){ if(n!=='Unknown') inc(n, -1); } }
     }
   }
   const order = [...pm.keys()].sort((a,b)=>{
-    const na=+a, nb=+b;
-    const an=isNaN(na), bn=isNaN(nb);
-    if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1;
-    if(bn) return -1;
-    return na-nb;
+    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    if(an&&bn) return (''+a).localeCompare(''+b); if(an) return 1; if(bn) return -1; return na-nb;
   });
   return {pm, order};
 }
-
-/* ===== Per-player tallies ===== */
 function perPlayerTallies(){
   const shots = new Map(), goals = new Map(), assists = new Map(), all=new Set();
   for(const ev of state.events){
-    if((ev.type==='for_shot' || ev.type==='for_goal') && ev.player){
-      shots.set(ev.player,(shots.get(ev.player)||0)+1);
-      all.add(ev.player);
-    }
-    if(ev.type==='for_goal' && ev.player){
-      goals.set(ev.player,(goals.get(ev.player)||0)+1);
-      all.add(ev.player);
-    }
-    if(ev.type==='for_goal' && ev.assist && ev.assist!=='None' && ev.assist!=='Unknown'){
-      assists.set(ev.assist,(assists.get(ev.assist)||0)+1);
-      all.add(ev.assist);
-    }
+    if((ev.type==='for_shot' || ev.type==='for_goal') && ev.player){ shots.set(ev.player,(shots.get(ev.player)||0)+1); all.add(ev.player); }
+    if(ev.type==='for_goal' && ev.player){ goals.set(ev.player,(goals.get(ev.player)||0)+1); all.add(ev.player); }
+    if(ev.type==='for_goal' && ev.assist && ev.assist!=='None' && ev.assist!=='Unknown'){ assists.set(ev.assist,(assists.get(ev.assist)||0)+1); all.add(ev.assist); }
   }
   const order=[...all].sort((a,b)=>{
-    const na=+a, nb=+b;
-    const an=isNaN(na), bn=isNaN(nb);
-    if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1;
-    if(bn) return -1;
-    return na-nb;
+    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    if(an&&bn) return (''+a).localeCompare(''+b); if(an) return 1; if(bn) return -1; return na-nb;
   });
   return {shots, goals, assists, order};
 }
 
-/* ===== Scoring ===== */
-
+/* ===== Scoring (unchanged from your prior version) ===== */
 const LEVEL_PROFILES = {
   U9:  { goalieBaseSV:0.75, teamFinExp:0.20, baTol:4, dzTol:6, minShots:10 },
   U11: { goalieBaseSV:0.80, teamFinExp:0.17, baTol:3, dzTol:5, minShots:15 },
@@ -1238,7 +1003,6 @@ const LEVEL_PROFILES = {
   U18: { goalieBaseSV:0.89, teamFinExp:0.12, baTol:2, dzTol:3, minShots:25 },
   Other:{ goalieBaseSV:0.85, teamFinExp:0.14, baTol:3, dzTol:4, minShots:20 }
 };
-
 function getLevelProfile(level){
   const key = String(level || '').toUpperCase();
   if (key.includes('U9'))  return LEVEL_PROFILES.U9;
@@ -1259,41 +1023,28 @@ function computeGoalieScore(){
   const baseSV = prof.goalieBaseSV;
   const volumeFactor = clamp01(shots / (prof.minShots || 15));
 
-  // 1. Core shot-stopping vs age expectation (0–70)
   const svFloor = Math.max(0.50, baseSV - 0.25);
   const svCeil  = Math.min(0.98, baseSV + 0.15);
 
   let svNorm;
-  if (shots === 0) {
-    svNorm = 0.5;
-  } else if (sv <= svFloor) {
-    svNorm = 0;
-  } else if (sv >= svCeil) {
-    svNorm = 1;
-  } else {
-    svNorm = (sv - svFloor) / (svCeil - svFloor);
-  }
+  if (shots === 0) svNorm = 0.5;
+  else if (sv <= svFloor) svNorm = 0;
+  else if (sv >= svCeil) svNorm = 1;
+  else svNorm = (sv - svFloor) / (svCeil - svFloor);
 
   let scoreSV = 70 * svNorm;
   scoreSV = 35 + volumeFactor * (scoreSV - 35);
 
-  // 2. Soft goal penalty (0 to -20)
   const softGoals = C.softGoals || 0;
   const softPenalty = Math.max(-20, -8 * softGoals);
 
-  // 3. Contextual difficulty adjustment (-10 to +10)
   const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
-  let hard = 0;
-  let soft = 0;
-
+  let hard = 0, soft = 0;
   for (const ev of gas){
     const ctx = ev.ga_ctx || '';
     const st  = ev.strength || 'EV';
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
-
     let s = 0;
-
-    // Hard chance signals
     if (/Screen/i.test(ctx))            s += 0.8;
     if (/Deflection/i.test(ctx))        s += 1.0;
     if (/Cross-Crease/i.test(ctx))      s += 0.8;
@@ -1303,27 +1054,18 @@ function computeGoalieScore(){
     if (st === 'SH')                    s += 0.7;
     if (cause.includes('BA'))           s += 1.0;
     if (cause.includes('DZ'))           s += 0.4;
-
-    // Bad / avoidable signals
     if (ev.type === 'soft_goal')        s -= 1.5;
     if (st === 'PP')                    s -= 0.7;
     if (cause.includes('BR'))           s -= 0.8;
-
-    if (s > 0) hard += s;
-    else if (s < 0) soft += -s;
+    if (s > 0) hard += s; else if (s < 0) soft += -s;
   }
-
   let ctxAdj = 0;
   if (gas.length){
     const net = (hard - soft) / gas.length;
-    if (net > 0){
-      ctxAdj = Math.min(10, net * 4);
-    } else if (net < 0){
-      ctxAdj = Math.max(-10, net * 4);
-    }
+    if (net > 0) ctxAdj = Math.min(10, net * 4);
+    else if (net < 0) ctxAdj = Math.max(-10, net * 4);
   }
 
-  // 4. Rebound control (0–10)
   const goodRebounds = state.events.filter(e => e.goodRebound).length;
   const rebDen = (C.badRebounds || 0) + goodRebounds + (C.smothers || 0);
   let scoreRebound = 5;
@@ -1333,7 +1075,6 @@ function computeGoalieScore(){
   }
   scoreRebound *= volumeFactor;
 
-  // 5. Big saves (0–10)
   let scoreBig = 0;
   if (shots > 0){
     const big = C.bigSaves || 0;
@@ -1342,15 +1083,11 @@ function computeGoalieScore(){
   }
 
   let total = scoreSV + softPenalty + ctxAdj + scoreRebound + scoreBig;
-
   if (total < 0) total = 0;
   if (total > 100) total = 100;
 
   return {
-    shots,
-    ga,
-    saves,
-    sv,
+    shots, ga, saves, sv,
     scoreSV: Math.round(scoreSV),
     softPenalty: Math.round(softPenalty),
     ctxAdj: Math.round(ctxAdj),
@@ -1394,8 +1131,7 @@ function computeTeamScore(){
   const modDZ = Math.min(12, 1.5*DZ);
 
   let total = Math.round(scoreSS + scoreFin + scoreImp + scoreStab - modBA - modDZ);
-  if(total<0) total=0;
-  if(total>100) total=100;
+  if(total<0) total=0; if(total>100) total=100;
 
   return {total, scoreSS, scoreFin, scoreImp, scoreStab, BA, DZ, SS, Fin};
 }
@@ -1406,26 +1142,37 @@ function shotShare(){
 }
 
 /* ===== Render ===== */
+const ARC_PERIM = 2*Math.PI*18; // 113.097
+function setArc(el, pct){ 
+  const clamped = Math.max(0, Math.min(100, pct));
+  const offset = ARC_PERIM * (1 - clamped/100);
+  el.style.strokeDasharray = String(ARC_PERIM);
+  el.style.strokeDashoffset = String(offset);
+}
 function updateMeta(){
-  $('gameMetaTag').textContent =
-    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.6.3`;
+  $('metaOpponent').textContent = state.opponent || 'Opponent?';
+  $('metaLevel').textContent = state.level || 'U11';
+  const d = state.date || new Date().toISOString().slice(0,10);
+  $('metaDate').textContent = d;
 }
 function refreshStats(){
   const A = state.countsA, F = state.countsF, T = state.team;
   const K = computeGoalieScore();
   const Team = computeTeamScore();
 
-  // Live Goalie/Team scores (center row)
+  // Live scores + color states
   const gs = $('gsLive'), ts = $('tsLive');
   if (gs && ts){
-    gs.textContent = K.total;
-    ts.textContent = Team.total;
-
-    // color states
+    gs.textContent = K.total; ts.textContent = Team.total;
     [gs,ts].forEach(el=>{ el.classList.remove('good','warn','badc'); });
     gs.classList.add(K.total>=85?'good':K.total>=70?'warn':'badc');
     ts.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'badc');
   }
+  // Arcs
+  setArc($('gsArc'), K.total);
+  $('gsArc').setAttribute('stroke', (K.total>=85)?'var(--good)':(K.total>=70)?'var(--warn)':'var(--bad)');
+  setArc($('tsArc'), Team.total);
+  $('tsArc').setAttribute('stroke', (Team.total>=85)?'var(--good)':(Team.total>=70)?'var(--warn)':'var(--bad)');
 
   $('savesVal').textContent   = K.saves;
   $('svVal').textContent      = A.shots>0 ? (K.sv).toFixed(3).slice(1) : '—';
@@ -1443,13 +1190,11 @@ function refreshStats(){
     const svp = v.A_shots ? ((saves/v.A_shots).toFixed(3).slice(1)) : '—';
     const ourShp = v.F_shots ? ((v.F_goals/v.F_shots).toFixed(3).slice(1)) : '—';
     const title = p===4?'OT':`P${p}`;
-    return `<div class="pchip">
-      <h4>${title}</h4>
-      <div>SF-SA ${v.F_shots}-${v.A_shots} • GF-GA ${v.F_goals}-${v.A_goals} • SV ${svp} • Sh% ${ourShp}</div>
-    </div>`;
+    return `<div class="card"><h3>${title}</h3><div class="val" style="font-size:13px;font-weight:600">SF-SA ${v.F_shots}-${v.A_shots} • GF-GA ${v.F_goals}-${v.A_goals} • SV ${svp} • Sh% ${ourShp}</div></div>`;
   }).join('');
   $('periodSummary').innerHTML = phtml;
 
+  // App bar live counters
   $('liveGF').textContent = F.goals;
   $('liveGA').textContent = A.goals;
   $('liveSF').textContent = F.shots;
@@ -1470,7 +1215,7 @@ function renderAll(){
   refreshLog();
 }
 
-/* ===== Summary builders ===== */
+/* ===== Summary builders & export (unchanged from your version) ===== */
 function makeSummaryTable(){
   const rows = [];
   const header = `<table><thead><tr>
@@ -1513,8 +1258,9 @@ function makeSummaryTable(){
     </div>`;
   return tbl + playersTbl;
 }
+function computePlusMinus(){ /* already defined above; reusing */ return window.__pmReuse||(window.__pmReuse=(function(){return null;})()); }
 function makePlusMinusTable(){
-  const {pm, order} = computePlusMinus();
+  const {pm, order} = (function(){ const out=window.__pmcalc?window.__pmcalc():null; return out|| (window.__pmcalc=computePlusMinus, computePlusMinus()); })();
   const rows = order.map(n=>{
     const v = pm.get(n)||0;
     const sign = v>0 ? '+' : (v<0 ? '−' : '');
@@ -1529,54 +1275,33 @@ function makePlusMinusTable(){
       </table>
     </div>`;
 }
-
-/* Narrower GA table: merge causes into one column */
 function buildGASummary(){
   const gas = state.events.filter(e=>e.type==='goal' || e.type==='soft_goal');
   if(!gas.length){
-    return `
-      <div class="card">
-        <h3>Goals Against Detail</h3>
-        <div class="small">No goals against.</div>
-      </div>`;
+    return `<div class="card"><h3>Goals Against Detail</h3><div class="small">No goals against.</div></div>`;
   }
   const rows = gas.map((ev,idx)=>{
     const when = fmtTime(ev.tISO);
     const ctx = ev.ga_ctx || 'Unspecified';
     const rawSt = ev.strength || 'EV';
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
-
-    // Merge BA/DZ/BR into a readable "Cause" cell
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
     const parts = [];
     if (cause.includes('BA') || ev.ga_ba) parts.push('Breakaway');
     if (cause.includes('DZ') || ev.ga_dz) parts.push('Turnover');
     if (cause.includes('BR') || ev.ga_br) parts.push('Bad Rebound');
     const causeStr = parts.length ? parts.join('; ') : '—';
-
-    return `<tr>
-      <td>${idx+1}</td>
-      <td>P${ev.period}</td>
-      <td>${when}</td>
-      <td>${ctx}</td>
-      <td>${st}</td>
-      <td>${causeStr}</td>
-    </tr>`;
+    return `<tr><td>${idx+1}</td><td>P${ev.period}</td><td>${when}</td><td>${ctx}</td><td>${st}</td><td>${causeStr}</td></tr>`;
   }).join('');
   return `
     <div class="card">
       <h3>Goals Against Detail</h3>
       <table style="margin-top:6px;">
-        <thead>
-          <tr>
-            <th>#</th><th>P</th><th>Time</th><th>Context</th><th>PP/SH</th><th>Cause</th>
-          </tr>
-        </thead>
+        <thead><tr><th>#</th><th>P</th><th>Time</th><th>Context</th><th>PP/SH</th><th>Cause</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
-
 function buildReadableSummary(){
   const K = computeGoalieScore(), T = computeTeamScore();
   const F = state.countsF, A = state.countsA;
@@ -1644,8 +1369,6 @@ function buildTeamBreakdown(){
   ];
   return parts.join('. ') + '.';
 }
-
-/* ===== Summary flow ===== */
 function endGame(){
   const K = computeGoalieScore();
   const Team = computeTeamScore();
@@ -1653,8 +1376,7 @@ function endGame(){
   $('summaryTitle').textContent = `Game Summary — ${title}`;
 
   const gsEl = $('goalieScoreNum'), tsEl = $('teamScoreNum');
-  gsEl.textContent = K.total;
-  tsEl.textContent = Team.total;
+  gsEl.textContent = K.total; tsEl.textContent = Team.total;
   [gsEl, tsEl].forEach(el=>el.classList.remove('good','warn','badc'));
   gsEl.classList.add(K.total>=85?'good':K.total>=70?'warn':'badc');
   tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'badc');
@@ -1670,44 +1392,28 @@ function endGame(){
 
   $('summaryReadable').innerHTML = buildReadableSummary();
   $('summaryTableWrap').innerHTML = makeSummaryTable();
-  $('pmTableWrap').innerHTML = makePlusMinusTable();
+  $('pmTableWrap').innerHTML = (function(){ const {pm,order}=computePlusMinus(); const rows=order.map(n=>{const v=pm.get(n)||0; const sign=v>0?'+':(v<0?'−':''); return `<tr><td>#${n}</td><td>${sign}${Math.abs(v)}</td></tr>`;}).join(''); return `<div class="card"><h3>Plus/Minus Summary</h3><table style="margin-top:6px;"><thead><tr><th>Player</th><th>+/-</th></tr></thead><tbody>${rows||'<tr><td colspan="2">—</td></tr>'}</tbody></table></div>`; })();
   $('gaDetailWrap').innerHTML = buildGASummary();
 
   $('summaryPanel').classList.remove('hidden');
   window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
 }
 
-/* ===== CSV (per game only) ===== */
-function safeName(s){
-  return String(s||'').replace(/[^\w\d\-_.() ]/g,'_').trim().replace(/\s+/g,'');
-}
+/* ===== CSV (unchanged) ===== */
+function safeName(s){ return String(s||'').replace(/[^\w\d\-_.() ]/g,'_').trim().replace(/\s+/g,''); }
 function buildGameRow(K, Team){
   const F=state.countsF, A=state.countsA;
-
-  const gaBA = state.events.filter(e=>{
-    if (e.type!=='goal' && e.type!=='soft_goal') return false;
-    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-    return e.ga_ba || cause.includes('BA');
-  }).length;
-  const gaDZ = state.events.filter(e=>{
-    if (e.type!=='goal' && e.type!=='soft_goal') return false;
-    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-    return e.ga_dz || cause.includes('DZ');
-  }).length;
-  const gaBR = state.events.filter(e=>{
-    if (e.type!=='goal' && e.type!=='soft_goal') return false;
-    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-    return e.ga_br || cause.includes('BR');
-  }).length;
+  const gaBA = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && (e.ga_ba || String(e.ga_cause||'').includes('BA')) ).length;
+  const gaDZ = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && (e.ga_dz || String(e.ga_cause||'').includes('DZ')) ).length;
+  const gaBR = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && (e.ga_br || String(e.ga_cause||'').includes('BR')) ).length;
   const gaOther = state.events.filter(e=>{
     if (e.type!=='goal' && e.type!=='soft_goal') return false;
-    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
-    const taggedBA = e.ga_ba || cause.includes('BA');
-    const taggedDZ = e.ga_dz || cause.includes('DZ');
-    const taggedBR = e.ga_br || cause.includes('BR');
+    const c = String(e.ga_cause||'');
+    const taggedBA = e.ga_ba || c.includes('BA');
+    const taggedDZ = e.ga_dz || c.includes('DZ');
+    const taggedBR = e.ga_br || c.includes('BR');
     return !taggedBA && !taggedDZ && !taggedBR;
   }).length;
-
   return {
     date: state.date || new Date().toISOString().slice(0,10),
     opponent: state.opponent||'',
@@ -1724,9 +1430,7 @@ function buildGameRow(K, Team){
     GA_off_BA: gaBA, GA_off_DZ: gaDZ, GA_off_BR: gaBR, GA_other: gaOther
   };
 }
-function rowToCSV(row, header){
-  return header.map(k=>typeof row[k]==='string'?JSON.stringify(row[k]):row[k]).join(',');
-}
+function rowToCSV(row, header){ return header.map(k=>typeof row[k]==='string'?JSON.stringify(row[k]):row[k]).join(','); }
 function seasonCSV(rows){
   const header=[
     "date","opponent","level","teamScore","goalieScore",
@@ -1778,86 +1482,48 @@ function openCopyModal(text){
   const ta = $('copyArea');
   ta.value = text || '';
   m.style.display='flex';
-  setTimeout(()=>{
-    ta.focus();
-    ta.setSelectionRange(0, ta.value.length);
-  }, 30);
+  setTimeout(()=>{ ta.focus(); ta.setSelectionRange(0, ta.value.length); }, 30);
 }
-function closeCopyModal(){
-  $('copyModal').style.display='none';
-}
-$('btnCopySelect').addEventListener('click', ()=>{
-  const ta = $('copyArea');
-  ta.focus();
-  ta.setSelectionRange(0, ta.value.length);
-});
+function closeCopyModal(){ $('copyModal').style.display='none'; }
+$('btnCopySelect').addEventListener('click', ()=>{ const ta = $('copyArea'); ta.focus(); ta.setSelectionRange(0, ta.value.length); });
 $('btnCopyClose').addEventListener('click', closeCopyModal);
-
 function buildSummaryText(){
   const tmp = document.createElement('div');
   tmp.innerHTML = buildReadableSummary();
   const main = tmp.textContent.replace(/\n{2,}/g, '\n').trim();
-
   const tblWrap = $('summaryTableWrap');
-  const tblText = tblWrap && tblWrap.innerText
-    ? '\n\n' + tblWrap.innerText.trim()
-    : '';
-
+  const tblText = tblWrap && tblWrap.innerText ? '\n\n' + tblWrap.innerText.trim() : '';
   const gaWrap = $('gaDetailWrap');
-  const gaText = gaWrap && gaWrap.innerText
-    ? '\n\nGoals Against Detail\n' + gaWrap.innerText.trim()
-    : '';
-
+  const gaText = gaWrap && gaWrap.innerText ? '\n\nGoals Against Detail\n' + gaWrap.innerText.trim() : '';
   return main + tblText + gaText;
 }
 
 /* ===== Roster & Picker ===== */
-function openRoster(){
-  $('rosterArea').value=(state.roster||[]).join('\n');
-  $('rosterModal').style.display='flex';
-}
+function openRoster(){ $('rosterArea').value=(state.roster||[]).join('\n'); $('rosterModal').style.display='flex'; }
 function closeRoster(){ $('rosterModal').style.display='none'; }
 function saveRosterFromArea(){
   const lines=$('rosterArea').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const uniq = Array.from(new Set(lines));
   uniq.sort((a,b)=>{
-    const na=+a, nb=+b;
-    const an=isNaN(na), bn=isNaN(nb);
-    if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1;
-    if(bn) return -1;
-    return na-nb;
+    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    if(an&&bn) return (''+a).localeCompare(''+b); if(an) return 1; if(bn) return -1; return na-nb;
   });
   state.roster=uniq;
   localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster));
-  save();
-  closeRoster();
+  save(); closeRoster();
 }
 let pendingType=null, pendingScorer=null;
 function openPicker(type, title='Select player number'){
-  pendingType=type;
-  buildPickerGrid();
-  $('pickerTitle').textContent = title;
-  $('pickerInput').value='';
-  $('pickerModal').style.display='flex';
+  pendingType=type; buildPickerGrid(); $('pickerTitle').textContent = title; $('pickerInput').value=''; $('pickerModal').style.display='flex';
 }
-function closePicker(){
-  $('pickerModal').style.display='none';
-  pendingType=null;
-}
+function closePicker(){ $('pickerModal').style.display='none'; pendingType=null; }
 function buildPickerGrid(){
   const grid = $('pickerGrid'), roster = (state.roster||[]);
   let uniq = Array.from(new Set(roster.map(x=>String(x).trim()).filter(Boolean)));
-  if(pendingType==='for_goal_assist' && pendingScorer){
-    uniq = uniq.filter(n=>n!==pendingScorer);
-  }
+  if(pendingType==='for_goal_assist' && pendingScorer){ uniq = uniq.filter(n=>n!==pendingScorer); }
   uniq.sort((a,b)=>{
-    const na=+a, nb=+b;
-    const an=isNaN(na), bn=isNaN(nb);
-    if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1;
-    if(bn) return -1;
-    return na-nb;
+    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    if(an&&bn) return (''+a).localeCompare(''+b); if(an) return 1; if(bn) return -1; return na-nb;
   });
   grid.innerHTML = uniq.length
     ? uniq.map(n=>`<div class="pickerBtn" data-n="${n}">#${n}</div>`).join('')
@@ -1876,66 +1542,38 @@ $('pickerUnknown').addEventListener('click', ()=>{
   if(!pendingType) return;
   handlePickerSelection('?',true);
 });
-$('pickerCancel').addEventListener('click', ()=>{
-  closePicker();
-  pendingScorer=null;
-});
+$('pickerCancel')?.addEventListener?.('click', ()=>{ closePicker(); pendingScorer=null; }); // optional in case element not present
+
 function handlePickerSelection(num, allowAdd){
   if(pendingType==='for_shot'){
     addEvent('for_shot',{player:num});
     if(allowAdd && !state.roster.includes(num)){
-      state.roster.push(num);
-      state.roster.sort((a,b)=>+a-+b);
-      localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster));
+      state.roster.push(num); state.roster.sort((a,b)=>+a-+b); localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster));
     }
-    closePicker();
-    return;
+    closePicker(); return;
   }
   if(pendingType==='for_goal_scorer'){
     pendingScorer = num;
     if(allowAdd && !state.roster.includes(num)){
-      state.roster.push(num);
-      state.roster.sort((a,b)=>+a-+b);
-      localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster));
+      state.roster.push(num); state.roster.sort((a,b)=>+a-+b); localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster));
     }
     $('pickerModal').style.display='none';
     setTimeout(()=>{ openPicker('for_goal_assist','Select assist (optional)'); }, 80);
     return;
   }
   if(pendingType==='for_goal_assist'){
-    if(num===pendingScorer){
-      alert('Assist cannot be the same as the scorer.');
-      return;
-    }
+    if(num===pendingScorer){ alert('Assist cannot be the same as the scorer.'); return; }
     const assist = num==='?' ? 'Unknown' : num;
     const ev = addEvent('for_goal',{player: pendingScorer, assist});
-    const exclude = [pendingScorer];
-    if(assist!=='Unknown') exclude.push(assist);
-    pendingScorer=null;
-    closePicker();
-    setTimeout(()=>{
-      openMultiPicker({
-        title:'Pick the other THREE on-ice (Our Goal)',
-        max:3,
-        event:ev,
-        field:'forOnIce',
-        exclude
-      });
-    }, 60);
+    const exclude = [pendingScorer]; if(assist!=='Unknown') exclude.push(assist);
+    pendingScorer=null; closePicker();
+    setTimeout(()=>{ openMultiPicker({ title:'Pick the other THREE on-ice (Our Goal)', max:3, event:ev, field:'forOnIce', exclude }); }, 60);
     return;
   }
   if(pendingType==='for_goal'){
     const ev = addEvent('for_goal',{player:num});
     closePicker();
-    setTimeout(()=>{
-      openMultiPicker({
-        title:'Pick the other THREE on-ice (Our Goal)',
-        max:3,
-        event:ev,
-        field:'forOnIce',
-        exclude:[num]
-      });
-    }, 60);
+    setTimeout(()=>{ openMultiPicker({ title:'Pick the other THREE on-ice (Our Goal)', max:3, event:ev, field:'forOnIce', exclude:[num] }); }, 60);
   }
 }
 
@@ -1956,9 +1594,7 @@ $('btnBreakaway').addEventListener('click', ()=>addEvent('breakaway_against'));
 $('btnDZTurnover').addEventListener('click', ()=>addEvent('dz_turnover'));
 $('btnNextPeriod').addEventListener('click', async ()=>{
   state.period = Math.min(4, state.period+1);
-  highlightPeriod();
-  await save();
-  vibrate(10);
+  highlightPeriod(); await save(); vibrate(10);
 });
 $('btnEnd').addEventListener('click', endGame);
 
@@ -1975,42 +1611,28 @@ $('btnReset').addEventListener('click', ()=>{
   $('gaDetailWrap').innerHTML='';
   $('summaryReadable').innerHTML='';
 
-  state.opponent='';
-  state.level='U11';
-  state.date=null;
-  state.period=1;
-  state.startedAt=new Date().toISOString();
-  state.gameId=Math.random().toString(36).slice(2);
-  state.events=[];
-  state.countsA={shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0};
-  state.countsF={shots:0, goals:0};
-  state.team={breakawaysAgainst:0, dzTurnovers:0};
-  state.lastEventId=0;
+  state.opponent=''; state.level='U11'; state.date=null; state.period=1;
+  state.startedAt=new Date().toISOString(); state.gameId=Math.random().toString(36).slice(2);
+  state.events=[]; state.countsA={shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0};
+  state.countsF={shots:0, goals:0}; state.team={breakawaysAgainst:0, dzTurnovers:0}; state.lastEventId=0;
   per = {1:initP(),2:initP(),3:initP(),4:initP()};
 
-  $('opponent').value='';
-  $('level').value='U11';
-  $('date').valueAsDate=new Date();
+  $('opponent').value=''; $('level').value='U11'; $('date').valueAsDate=new Date();
   $('resumeBanner').classList.add('hidden');
 
-  save();
-  renderAll();
-  highlightPeriod();
-  window.scrollTo({top:0,behavior:'smooth'});
+  save(); renderAll(); highlightPeriod(); window.scrollTo({top:0,behavior:'smooth'});
 });
-
 $('btnExportGameCSV').addEventListener('click', ()=>{
   const csv = gameCSV();
   const date = state.date || new Date().toISOString().slice(0,10);
   const fn = `TeamTracker_${date}_vs_${safeName(state.opponent||'Unknown')}(${safeName(state.level||'U11')}).csv`;
   shareCSV(csv, fn);
 });
-
 $('btnCopySummary').addEventListener('click', ()=>{
   if(!$('summaryReadable').innerHTML.trim()){
     $('summaryReadable').innerHTML = buildReadableSummary();
     $('summaryTableWrap').innerHTML = makeSummaryTable();
-    $('pmTableWrap').innerHTML = makePlusMinusTable();
+    $('pmTableWrap').innerHTML = (function(){ const {pm,order}=computePlusMinus(); const rows=order.map(n=>{const v=pm.get(n)||0; const sign=v>0?'+':(v<0?'−':''); return `<tr><td>#${n}</td><td>${sign}${Math.abs(v)}</td></tr>`;}).join(''); return `<div class="card"><h3>Plus/Minus Summary</h3><table style="margin-top:6px;"><thead><tr><th>Player</th><th>+/-</th></tr></thead><tbody>${rows||'<tr><td colspan="2">—</td></tr>'}</tbody></table></div>`; })();
     $('gaDetailWrap').innerHTML = buildGASummary();
   }
   const txt = buildSummaryText();
@@ -2018,80 +1640,42 @@ $('btnCopySummary').addEventListener('click', ()=>{
 });
 
 /* Inputs */
-$('opponent').addEventListener('input', e=>{
-  state.opponent=e.target.value;
-  save();
-  updateMeta();
-});
-$('level').addEventListener('change', e=>{
-  state.level=e.target.value;
-  save();
-  updateMeta();
-});
-$('date').addEventListener('change', e=>{
-  state.date=e.target.value;
-  save();
-  updateMeta();
-});
+$('opponent').addEventListener('input', e=>{ state.opponent=e.target.value; save(); updateMeta(); });
+$('level').addEventListener('change', e=>{ state.level=e.target.value; save(); updateMeta(); });
+$('date').addEventListener('change', e=>{ state.date=e.target.value; save(); updateMeta(); });
 $('periodChips').addEventListener('click', async e=>{
   const chip=e.target.closest('.chip'); if(!chip) return;
   const newP = Number(chip.dataset.p);
-  if(newP!==state.period){
-    state.period=newP;
-    highlightPeriod();
-    await save();
-  }
+  if(newP!==state.period){ state.period=newP; highlightPeriod(); await save(); }
 });
 
-/* Modal backdrop close */
-['rosterModal','pickerModal','copyModal','gaOverlay','undoModal','onIceModal','strengthModal'].forEach(id=>{
-  const el = $(id);
-  el.addEventListener('click', e=>{
-    if(e.target === el){
-      el.style.display='none';
-      if(id==='pickerModal') pendingType=null;
-      if(id==='onIceModal') multiPick.eventRef=null;
-      if(id==='strengthModal') strengthTarget=null;
-    }
-  });
-});
+/* Collapsibles init */
+(function(){
+  const dbg = $('debugWrap'), logw = $('logWrap');
+  const dbgT = $('debugToggler'), logT = $('logToggler');
+  const dbgC = dbg.querySelector('.content'), logC = logw.querySelector('.content');
+  const dbgChev=$('debugChev'), logChev=$('logChev');
+  // Start collapsed
+  dbg.classList.remove('open'); logw.classList.remove('open');
+  dbgT.addEventListener('click', ()=>{ dbg.classList.toggle('open'); dbgChev.textContent = dbg.classList.contains('open')?'▾':'▸'; });
+  logT.addEventListener('click', ()=>{ logw.classList.toggle('open'); logChev.textContent = logw.classList.contains('open')?'▾':'▸'; });
+})();
 
-/* ===== Debug line updater (shows smothers) ===== */
+/* Debug line updater */
 function updateDebugLines(){
-  const gEl = document.getElementById('debugGoalieLine');
-  const tEl = document.getElementById('debugTeamLine');
-  if (!gEl || !tEl) return;
-
-  const K = computeGoalieScore();
-  const T = computeTeamScore();
-
-  const bad = state.countsA.badRebounds || 0;
-  const smothers = state.countsA.smothers || 0;
-  const redeemed = K.goodRebounds || 0;
-
-  gEl.textContent =
-    `Goalie: Total ${K.total} | Core SV: ${K.scoreSV} | Soft: ${K.softPenalty} | ` +
-    `Ctx: ${K.ctxAdj} | Rebound: ${K.scoreRebound} (bad ${bad}, smother ${smothers}, redeemed ${redeemed}) | ` +
-    `Big: ${K.scoreBig}`;
-
-  const ssPct = Math.round((T.SS || 0) * 100);
-  const finPct = Math.round((T.Fin || 0) * 100);
+  const gEl = $('debugGoalieLine'); const tEl = $('debugTeamLine'); if (!gEl || !tEl) return;
+  const K = computeGoalieScore(); const T = computeTeamScore();
+  const bad = state.countsA.badRebounds || 0; const smothers = state.countsA.smothers || 0; const redeemed = K.goodRebounds || 0;
+  gEl.textContent = `Goalie: Total ${K.total} | Core SV: ${K.scoreSV} | Soft: ${K.softPenalty} | Ctx: ${K.ctxAdj} | Rebound: ${K.scoreRebound} (bad ${bad}, smother ${smothers}, redeemed ${redeemed}) | Big: ${K.scoreBig}`;
+  const ssPct = Math.round((T.SS || 0) * 100); const finPct = Math.round((T.Fin || 0) * 100);
   const modBA = Math.min(12, 3 * (state.team.breakawaysAgainst || 0));
   const modDZ = Math.min(12, 1.5 * (state.team.dzTurnovers || 0));
-
-  tEl.textContent =
-    `Team: Total ${Math.round(T.total)} | ShotShare +${Math.round(T.scoreSS)} | ` +
-    `Finishing +${Math.round(T.scoreFin)} | Scoreboard +${Math.round(T.scoreImp)} | ` +
-    `Consistency +${Math.round(T.scoreStab)} | Habits −${Math.round(modBA + modDZ)} ` +
-    `(BA ${state.team.breakawaysAgainst || 0}, DZ ${state.team.dzTurnovers || 0}) | ` +
-    `SS ${ssPct}% | Fin ${finPct}%`;
+  tEl.textContent = `Team: Total ${Math.round(T.total)} | ShotShare +${Math.round(T.scoreSS)} | Finishing +${Math.round(T.scoreFin)} | Scoreboard +${Math.round(T.scoreImp)} | Consistency +${Math.round(T.scoreStab)} | Habits −${Math.round(modBA + modDZ)} (BA ${state.team.breakawaysAgainst || 0}, DZ ${state.team.dzTurnovers || 0}) | SS ${ssPct}% | Fin ${finPct}%`;
 }
 
 /* extra saves */
 window.addEventListener('pagehide', save);
-document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState!=='visible') save();
-});
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState!=='visible') save(); });
 setInterval(save, 4000);
 
 /* Init */
@@ -2101,16 +1685,10 @@ setInterval(save, 4000);
     const r = localStorage.getItem(ROSTER_KEY);
     state.roster = r ? JSON.parse(r) : [];
     state.roster.sort((a,b)=>{
-      const na=+a, nb=+b;
-      const an=isNaN(na), bn=isNaN(nb);
-      if(an&&bn) return (''+a).localeCompare(''+b);
-      if(an) return 1;
-      if(bn) return -1;
-      return na-nb;
+      const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+      if(an&&bn) return (''+a).localeCompare(''+b); if(an) return 1; if(bn) return -1; return na-nb;
     });
-  }catch(_){
-    state.roster=[];
-  }
+  }catch(_){ state.roster=[]; }
   await persistStorage();
   const loaded = await load();
   if (loaded && Array.isArray(loaded.events)){
