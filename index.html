@@ -177,6 +177,23 @@
   th{background:#0f1a28;color:#cfe5ff;text-align:left}
 
   .debugCard .line{font-size:12px;color:#b8c8dc;margin-top:4px;word-break:break-word}
+  /* Collapsible debug */
+details.debugCard { padding: 0; }
+details.debugCard > summary{
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid #233044;
+  user-select: none;
+}
+details.debugCard[open] > summary{
+  color: #cfe5ff;
+  border-bottom-color: #2f5e9a;
+}
+details.debugCard summary::-webkit-details-marker{ display:none; }
+details.debugCard .line{ padding: 10px 12px; }
 </style>
 </head>
 <body>
@@ -287,12 +304,12 @@
       <div class="card"><h3>D-Zone TO</h3><div class="val" id="dzVal">0</div></div>
     </div>
 
-    <!-- Debug -->
-    <div class="card debugCard" id="debugCard" style="margin-top:8px;">
-      <h3>Live Debug</h3>
-      <div class="line" id="debugGoalieLine">Goalie: —</div>
-      <div class="line" id="debugTeamLine">Team: —</div>
-    </div>
+<!-- Debug (collapsible) -->
+<details class="card debugCard" id="debugWrap" style="margin-top:8px;">
+  <summary>Live Debug</summary>
+  <div class="line" id="debugGoalieLine">Goalie: —</div>
+  <div class="line" id="debugTeamLine">Team: —</div>
+</details>
 
     <div class="pgrid" id="periodSummary"></div>
     <div class="log" id="log"></div>
