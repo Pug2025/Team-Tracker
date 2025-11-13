@@ -1423,7 +1423,9 @@ function computeGoalieScore(){
   const softGoals = C.softGoals || 0;
   const softPenalty = Math.max(-20, -8 * softGoals);
 
-  // 3. Contextual difficulty adjustment (-10 to +10)
+  // 3. Contextual difficulty adjustment (0 to -10 ONLY)
+  // Context can reduce the damage from a goal, but it can never
+  // push the goalie score UP when another goal is added.
   const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
   let hard = 0;
   let soft = 0;
@@ -1435,7 +1437,7 @@ function computeGoalieScore(){
 
     let s = 0;
 
-    // Hard chance signals
+    // Hard chance signals (make the chance tougher)
     if (/Screen/i.test(ctx))            s += 0.8;
     if (/Deflection/i.test(ctx))        s += 1.0;
     if (/Cross-Crease/i.test(ctx))      s += 0.8;
@@ -1444,12 +1446,12 @@ function computeGoalieScore(){
     if (/Rebound/i.test(ctx))           s += 0.5;
     if (st === 'SH')                    s += 0.7;
     if (cause.includes('BA'))           s += 1.0;
-    if (cause.includes('DZ'))           s += 0.4;
+    if (cause.includes('DZ'))          s += 0.4;
 
-    // Bad / avoidable signals
+    // Bad / avoidable signals (make the chance "softer")
     if (ev.type === 'soft_goal')        s -= 1.5;
     if (st === 'PP')                    s -= 0.7;
-    if (cause.includes('BR'))           s -= 0.8;
+    if (cause.includes('BR'))          s -= 0.8;
 
     if (s > 0) hard += s;
     else if (s < 0) soft += -s;
@@ -1458,10 +1460,14 @@ function computeGoalieScore(){
   let ctxAdj = 0;
   if (gas.length){
     const net = (hard - soft) / gas.length;
-    if (net > 0){
-      ctxAdj = Math.min(10, net * 4);
-    } else if (net < 0){
-      ctxAdj = Math.max(-10, net * 4);
+
+    // If the mix of goals is mostly *hard* (screens, cross-crease, SH, BA),
+    // we treat context as neutral (0) — we do NOT give bonus points.
+    // If the mix is mostly *soft/avoidable*, we apply a negative adjustment.
+    if (net <= 0){
+      ctxAdj = Math.max(-10, net * 4);  // 0 to -10
+    } else {
+      ctxAdj = 0;                       // never positive
     }
   }
 
