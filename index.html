@@ -1393,105 +1393,98 @@ function getLevelProfile(level){
 function computeGoalieScore(){
   const C = state.countsA;
   const shots = C.shots || 0;
-  const ga = C.goals || 0;
+  const ga    = C.goals || 0;
   const saves = Math.max(0, shots - ga);
-  const sv = shots > 0 ? saves / shots : 1;
+  const sv    = shots > 0 ? saves / shots : 1;
 
+  // Level profile + shot volume
   const prof = getLevelProfile(state.level);
   const baseSV = prof.goalieBaseSV;
   const volumeFactor = clamp01(shots / (prof.minShots || 15));
 
-  // 1. Core shot-stopping vs age expectation (0–70)
-  const svFloor = Math.max(0.50, baseSV - 0.25);
-  const svCeil  = Math.min(0.98, baseSV + 0.15);
+  // Expected goals against at this level
+  const expectedGA = shots * (1 - baseSV);
+  const perf = expectedGA - ga;          // + = better than expected, - = worse
 
-  let svNorm;
-  if (shots === 0) {
-    svNorm = 0.5;
-  } else if (sv <= svFloor) {
-    svNorm = 0;
-  } else if (sv >= svCeil) {
-    svNorm = 1;
+  let perfNorm;
+  if (shots === 0){
+    perfNorm = 0.5;                      // neutral if no workload
   } else {
-    svNorm = (sv - svFloor) / (svCeil - svFloor);
+    // Treat ±3 GA vs expectation as the full band
+    perfNorm = clamp01(0.5 + perf / 6);
   }
 
-  let scoreSV = 70 * svNorm;
-  scoreSV = 35 + volumeFactor * (scoreSV - 35);
+  // Core shot-stopping score:
+  // base 75, +/- up to ~20 depending on performance & workload
+  const coreSpan = 40;
+  let scoreSV = 75 + (perfNorm - 0.5) * (coreSpan * volumeFactor);
 
-  // 2. Soft goal penalty (0 to -20)
+  // Soft goal penalty (only down, capped)
   const softGoals = C.softGoals || 0;
-  const softPenalty = Math.max(-20, -8 * softGoals);
+  const softPenalty = Math.max(-21, -7 * softGoals);
 
-  // 3. Contextual difficulty adjustment (0 to -10 ONLY)
-  // Context can reduce the damage from a goal, but it can never
-  // push the goalie score UP when another goal is added.
+  // Context: ONLY ever a small penalty for clearly "easy" goals.
+  // Never rewards goals against.
   const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
-  let hard = 0;
-  let soft = 0;
+  let ctxBad = 0;
 
   for (const ev of gas){
-    const ctx = ev.ga_ctx || '';
-    const st  = ev.strength || 'EV';
-    const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
+    const ctx   = ev.ga_ctx || '';
+    const st    = ev.strength || 'EV';
+    const cause = ev.ga_cause || '';
 
-    let s = 0;
+    const isScreen       = /Screen/i.test(ctx);
+    const isDeflection   = /Deflection/i.test(ctx);
+    const isCrossCrease  = /Cross-Crease/i.test(ctx);
+    const isReboundTag   = /Rebound/i.test(ctx);
 
-    // Hard chance signals (make the chance tougher)
-    if (/Screen/i.test(ctx))            s += 0.8;
-    if (/Deflection/i.test(ctx))        s += 1.0;
-    if (/Cross-Crease/i.test(ctx))      s += 0.8;
-    if (/Weak-Side/i.test(ctx))         s += 0.6;
-    if (/Rush/i.test(ctx))              s += 0.5;
-    if (/Rebound/i.test(ctx))           s += 0.5;
-    if (st === 'SH')                    s += 0.7;
-    if (cause.includes('BA'))           s += 1.0;
-    if (cause.includes('DZ'))          s += 0.4;
+    const hasBA = typeof cause === 'string' && cause.includes('BA');
+    const hasDZ = typeof cause === 'string' && cause.includes('DZ');
+    const hasBR = typeof cause === 'string' && cause.includes('BR');
 
-    // Bad / avoidable signals (make the chance "softer")
-    if (ev.type === 'soft_goal')        s -= 1.5;
-    if (st === 'PP')                    s -= 0.7;
-    if (cause.includes('BR'))          s -= 0.8;
+    let local = 0;
 
-    if (s > 0) hard += s;
-    else if (s < 0) soft += -s;
+    // Only penalize if it does NOT look like a genuinely hard chance:
+    if (!hasBA && !isScreen && !isDeflection && !isCrossCrease && st !== 'SH'){
+      local += 1.0;                  // basic "this looks stoppable"
+
+      if (isReboundTag || hasBR)     local += 0.5;  // rebound-driven
+      if (ev.type === 'soft_goal')   local += 0.5;  // soft on top of that
+      if (st === 'PP')               local -= 0.5;  // PP slightly softens the hit
+    }
+
+    if (local > 0) ctxBad += local;
   }
 
   let ctxAdj = 0;
   if (gas.length){
-    const net = (hard - soft) / gas.length;
-
-    // If the mix of goals is mostly *hard* (screens, cross-crease, SH, BA),
-    // we treat context as neutral (0) — we do NOT give bonus points.
-    // If the mix is mostly *soft/avoidable*, we apply a negative adjustment.
-    if (net <= 0){
-      ctxAdj = Math.max(-10, net * 4);  // 0 to -10
-    } else {
-      ctxAdj = 0;                       // never positive
-    }
+    const avg = ctxBad / gas.length;
+    // Penalty only, up to -8
+    ctxAdj = -Math.min(8, avg * 3);
   }
 
-  // 4. Rebound control (0–10)
+  // Rebound control: smothers + "redeemed" rebounds vs bad rebounds
   const goodRebounds = state.events.filter(e => e.goodRebound).length;
   const rebDen = (C.badRebounds || 0) + goodRebounds + (C.smothers || 0);
-  let scoreRebound = 5;
+
+  let scoreRebound;
   if (rebDen > 0){
     const quality = 1 - (C.badRebounds || 0) / rebDen;
-    scoreRebound = 10 * clamp01(quality);
+    scoreRebound = 6 * clamp01(quality) * volumeFactor; // 0–6 pts
+  } else {
+    // No data: small neutral bump scaled by volume
+    scoreRebound = 3 * volumeFactor;
   }
-  scoreRebound *= volumeFactor;
 
-  // 5. Big saves (0–10)
+  // Big saves: nice bump, but not game-breaking
   let scoreBig = 0;
   if (shots > 0){
     const big = C.bigSaves || 0;
-    scoreBig = Math.min(10, 1.5 * big);
-    scoreBig *= clamp01(shots / 15);
+    scoreBig = Math.min(6, 1.2 * big) * clamp01(shots / 15);
   }
 
   let total = scoreSV + softPenalty + ctxAdj + scoreRebound + scoreBig;
-
-  if (total < 0) total = 0;
+  if (total < 0)   total = 0;
   if (total > 100) total = 100;
 
   return {
@@ -1499,132 +1492,74 @@ function computeGoalieScore(){
     ga,
     saves,
     sv,
-    scoreSV: Math.round(scoreSV),
-    softPenalty: Math.round(softPenalty),
-    ctxAdj: Math.round(ctxAdj),
-    scoreRebound: Math.round(scoreRebound),
-    scoreBig: Math.round(scoreBig),
+    scoreSV:       Math.round(scoreSV),
+    softPenalty:   Math.round(softPenalty),
+    ctxAdj:        Math.round(ctxAdj),
+    scoreRebound:  Math.round(scoreRebound),
+    scoreBig:      Math.round(scoreBig),
     goodRebounds,
-    total: Math.round(total)
+    total:         Math.round(total)
   };
 }
 function computeTeamScore(){
-  const SF = state.countsF.shots, SA = state.countsA.shots;
-  const GF = state.countsF.goals, GA = state.countsA.goals;
+  const SF = state.countsF.shots;
+  const SA = state.countsA.shots;
+  const GF = state.countsF.goals;
+  const GA = state.countsA.goals;
 
-  const SS = (SF+SA)>0 ? SF/(SF+SA) : 0.5;
-  const scoreSS = 35 * SS;
+  // 1) Shot share (possession / territory) – up to 25 pts
+  const SS = (SF + SA) > 0 ? SF / (SF + SA) : 0.5;
+  const scoreSS = 25 * SS;
 
-  const Fin = SF>0 ? GF/SF : 0;
-  const scoreFin = 20 * Math.min(1, Fin/0.30);
+  // 2) Finishing vs age-level expectation – up to 25 pts
+  const Fin = SF > 0 ? GF / SF : 0;
+  const prof = getLevelProfile(state.level);
+  const expFin = prof.teamFinExp || 0.17; // e.g. U11 ~17% is "normal"
+  const scoreFin = 25 * clamp01(Fin / Math.max(0.05, expFin));
 
-  const d = (GF - GA)/Math.max(1, SF+SA);
-  const Impact = clamp01(0.5 + 3*d);
-  const scoreImp = 30 * Impact;
+  // 3) Scoreboard impact (outscoring the opponent) – up to 35 pts
+  const d = (GF - GA) / Math.max(1, SF + SA);
+  const Impact = clamp01(0.5 + 4 * d);     // win by more -> closer to 1
+  const scoreImp = 35 * Impact;
 
+  // 4) Period-to-period consistency – up to 15 pts
   const ssPeriods = [1,2,3,4].map(p=>{
     const v = per[p];
     const den = v.F_shots + v.A_shots;
-    return den>0 ? (v.F_shots/den) : null;
-  }).filter(v=>v!==null);
-  let sigma = 0;
-  if(ssPeriods.length>1){
-    const mu = ssPeriods.reduce((a,b)=>a+b,0)/ssPeriods.length;
-    const varr = ssPeriods.reduce((a,b)=>a+(b-mu)*(b-mu),0)/ssPeriods.length;
-    sigma = Math.sqrt(varr);
-  }
-  const Stability = clamp01(1 - (sigma/0.25));
-  const scoreStab = 12 * Stability;
+    return den > 0 ? (v.F_shots / den) : null;
+  }).filter(v => v !== null);
 
+  let sigma = 0;
+  if (ssPeriods.length > 1){
+    const mu = ssPeriods.reduce((a,b)=>a+b,0) / ssPeriods.length;
+    const variance = ssPeriods.reduce((a,b)=>a + (b - mu) * (b - mu), 0) / ssPeriods.length;
+    sigma = Math.sqrt(variance);
+  }
+
+  const Stability = clamp01(1 - (sigma / 0.25));
+  const scoreStab = 15 * Stability;
+
+  // 5) Habit penalties for breakaways & D-zone turnovers
   const BA = state.team.breakawaysAgainst || 0;
-  const DZ = state.team.dzTurnovers || 0;
-  const modBA = Math.min(12, 3*BA);
-  const modDZ = Math.min(12, 1.5*DZ);
+  const DZ = state.team.dzTurnovers       || 0;
+  const modBA = Math.min(12, 3  * BA);
+  const modDZ = Math.min(12, 1.5 * DZ);
 
   let total = Math.round(scoreSS + scoreFin + scoreImp + scoreStab - modBA - modDZ);
-  if(total<0) total=0;
-  if(total>100) total=100;
+  if (total < 0)   total = 0;
+  if (total > 100) total = 100;
 
-  return {total, scoreSS, scoreFin, scoreImp, scoreStab, BA, DZ, SS, Fin};
-}
-function shotShare(){
-  const sf = state.countsF.shots, sa = state.countsA.shots;
-  const d = sf+sa;
-  return d>0 ? (sf/d) : 0.5;
-}
-
-/* ===== Render ===== */
-function updateMeta(){
-  $('gameMetaTag').textContent =
-    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.7.2`;
-}
-function refreshStats(){
-  const A = state.countsA, F = state.countsF, T = state.team;
-  const K = computeGoalieScore();
-  const Team = computeTeamScore();
-
-  // Live Goalie/Team scores (center row with circular arcs)
-  const gs = $('gsLive'), ts = $('tsLive');
-  const gsRing = $('gsRing'), tsRing = $('tsRing');
-  const gsArc  = $('gsArc'),  tsArc  = $('tsArc');
-
-  if (gs && ts){
-    gs.textContent = K.total;
-    ts.textContent = Team.total;
-
-    // Clear previous quality classes
-    [gs, ts, gsRing, tsRing].forEach(el=>{
-      if(!el) return;
-      el.classList.remove('good','warn','badc');
-    });
-
-    const goalieClass = K.total>=85 ? 'good' : K.total>=70 ? 'warn' : 'badc';
-    const teamClass   = Team.total>=85 ? 'good' : Team.total>=70 ? 'warn' : 'badc';
-
-    [gs, gsRing].forEach(el=>{ if(el) el.classList.add(goalieClass); });
-    [ts, tsRing].forEach(el=>{ if(el) el.classList.add(teamClass); });
-
-    // Update arc length (0–100 mapped onto 0–113px)
-    const CIRC = 113; // stroke length for r=18
-    if (gsArc){
-      const frac = Math.max(0, Math.min(1, (K.total || 0) / 100));
-      gsArc.style.strokeDashoffset = String(CIRC * (1 - frac));
-    }
-    if (tsArc){
-      const frac = Math.max(0, Math.min(1, (Team.total || 0) / 100));
-      tsArc.style.strokeDashoffset = String(CIRC * (1 - frac));
-    }
-  }
-
-  $('savesVal').textContent   = K.saves;
-  $('svVal').textContent      = A.shots>0 ? (K.sv).toFixed(3).slice(1) : '—';
-  $('smotherVal').textContent = A.smothers;
-  $('brVal').textContent      = A.badRebounds;
-  $('bigVal').textContent     = A.bigSaves;
-  $('shootVal').textContent   = F.shots>0 ? ((F.goals/F.shots).toFixed(3).slice(1)) : '—';
-  $('ssVal').textContent      = ((shotShare()*100).toFixed(0)) + '%';
-  $('baVal').textContent      = T.breakawaysAgainst||0;
-  $('dzVal').textContent      = T.dzTurnovers||0;
-
-  const phtml = [1,2,3,4].map(p=>{
-    const v = per[p];
-    const saves = Math.max(0, v.A_shots - v.A_goals);
-    const svp = v.A_shots ? ((saves/v.A_shots).toFixed(3).slice(1)) : '—';
-    const ourShp = v.F_shots ? ((v.F_goals/v.F_shots).toFixed(3).slice(1)) : '—';
-    const title = p===4?'OT':`P${p}`;
-    return `<div class="pchip">
-      <h4>${title}</h4>
-      <div>SF-SA ${v.F_shots}-${v.A_shots} • GF-GA ${v.F_goals}-${v.A_goals} • SV ${svp} • Sh% ${ourShp}</div>
-    </div>`;
-  }).join('');
-  $('periodSummary').innerHTML = phtml;
-
-  $('liveGF').textContent = F.goals;
-  $('liveGA').textContent = A.goals;
-  $('liveSF').textContent = F.shots;
-  $('liveSA').textContent = A.shots;
-
-  updateDebugLines();
+  return {
+    total,
+    scoreSS,
+    scoreFin,
+    scoreImp,
+    scoreStab,
+    BA,
+    DZ,
+    SS,
+    Fin
+  };
 }
 function refreshLog(){
   $('log').innerHTML = state.events.slice(-200)
