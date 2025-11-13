@@ -1,21 +1,23 @@
 {
   "name": "Team Tracker",
-  "short_name": "Tracker",
-  "description": "Rink-side hockey tracker with live goalie/team scoring and fast logging.",
-  "start_url": "./index.html",
+  "short_name": "TeamTracker",
+  "description": "On-ice event tracking, goalie & team scoring — v3.7.3",
+  "start_url": "index.html?v=373",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#0d1117",
+  "background_color": "#0b0e11",
+  "theme_color": "#141922",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
