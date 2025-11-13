@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<link rel="manifest" href="manifest.json?v=373">
+<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.7.3)</title>
+<title>Team Tracker – iPhone (v3.7.1)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -37,14 +37,7 @@
   }
 
   .row{display:flex;gap:10px;flex-wrap:wrap}
-  .periodRow{display:flex;gap:10px;flex-wrap:nowrap}
-  .col{flex:1;min-width:0}
-  @media (max-width: 390px){
-    .periodRow{flex-wrap:wrap}
-    .periodRow .dateCol{flex:100%;min-width:100%}
-    .periodRow .periodCol{flex:100%;min-width:100%}
-  }
-
+  .col{flex:1;min-width:120px}
   label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px}
   input,select{
     width:100%;padding:12px;border-radius:12px;border:1px solid #2a3444;
@@ -58,117 +51,305 @@
     padding:16px 14px;border-radius:14px;font-size:16px;font-weight:600;
     box-shadow:0 6px 12px rgba(0,0,0,.22);
     touch-action:manipulation;user-select:none;cursor:pointer;
-    position:relative;
-    outline:1px solid rgba(255,255,255,0.04);
   }
   .btn:active{transform:scale(.98)}
-  /* semantic outlines (replaces old color chips) */
-  .btn.shot{outline-color:#295a96}
-  .btn.big{outline-color:#2e6e8f}
-  .btn.goal{outline-color:#7a2a46}
-  .btn.soft{outline-color:#a2344e}
-  .btn.smother{outline-color:#2b6b4b}
-  .btn.bad{outline-color:#836039}
-  .btn.undo{outline-color:#45516a}
-  .btn.period{outline-color:#415062}
-  .btn.end{outline-color:#3b6c3a;background:linear-gradient(180deg,#345e2f,#1f381c)}
-  .btn.roster{background:#20324a;padding:10px 12px;font-size:14px;outline-color:#3c5f8d}
-  .btn.team{background:#2a2342;outline-color:#4b3d85}
+  .btn.shot{background:#1e2f47}
+  .btn.goal{background:#3a2230}
+  .btn.soft{background:#4b2430}
+  .btn.smother{background:#1d3b2a}
+  .btn.bad{background:#3b2a1d}
+  .btn.big{background:#1d2f3b}
+  .btn.undo{background:#2b3240}
+  .btn.period{background:#2a2f3a}
+  .btn.end{background:linear-gradient(180deg,#345e2f,#1f381c)}
+  .btn.roster{background:#20324a;padding:10px 12px;font-size:14px}
+  .btn.team{background:#2a2342}
+  .btn.team:active,.btn.roster:active{transform:scale(.97)}
 
   /* Live floating scoreboard */
   .livebar{
-    position:fixed; top:0; left:50%; transform:translateX(-50%);
-    width:calc(100% - 28px); max-width:520px; z-index:999;
-    margin:0; padding:8px 10px; border-radius:10px;
-    background:#101520; border:1px solid #233044;
-    backdrop-filter:blur(6px); box-sizing:border-box;
-  }
-  /* 3-column grid with two rows so SF/SA are centered under GF/GA */
-  .livebar-grid{
-    display:grid;
-    grid-template-columns:1fr auto 1fr;
-    grid-template-rows:auto auto;
-    align-items:center;
-    column-gap:12px; row-gap:2px;
-    font-weight:700;
-  }
-  .livebar-title{
-    grid-column:2; grid-row:1 / span 2; align-self:center; justify-self:center;
-    font-size:16px; font-weight:800;
-  }
-  .live-metric{justify-self:center}
-  .live-top{font-size:18px}
-  .live-sub{font-size:12px;color:var(--muted)}
-  @media (max-width: 768px) {
-    .livebar{
-      left:0; transform:none; width:100%; max-width:none; border-radius:0 0 10px 10px;
-    }
-    .wrap{padding-top:80px}
+    position:fixed;
+    top:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:calc(100% - 28px);
+    max-width:520px;
+    z-index:999;
+    margin:0;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#101520;
+    border:1px solid #233044;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    backdrop-filter:blur(6px);
+    box-sizing:border-box;
   }
 
-  /* Centered live Goalie/Team scores */
+  @media (max-width: 768px) {
+    .livebar{
+      left:0;
+      transform:none;
+      width:100%;
+      max-width:none;
+      border-radius:0 0 10px 10px;
+      margin:0;
+    }
+    .wrap{
+      padding-top:80px;
+    }
+  }
+
+  /* Align GF / GA with SF / SA in 3 columns */
+  .livebar-main,
+  .livebar-sub{
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    font-size:14px;
+  }
+  .livebar-main{
+    font-size:18px;
+    font-weight:700;
+  }
+  .livebar-main > div:nth-child(1),
+  .livebar-sub > div:nth-child(1){
+    text-align:left;
+  }
+  .livebar-main > div:nth-child(2),
+  .livebar-sub > div:nth-child(2){
+    text-align:center;
+  }
+  .livebar-main > div:nth-child(3),
+  .livebar-sub > div:nth-child(3){
+    text-align:right;
+  }
+  .livebar-sub{
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  /* Centered live score boxes */
   .scoresRow{
-    display:flex; justify-content:center; gap:10px; margin-top:12px;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-top:12px;
   }
   .scoreBox{
-    background:#101520; border:1px solid #233044; border-radius:12px; padding:10px 14px;
-    min-width:150px; text-align:center;
+    background:#101520;
+    border:1px solid #233044;
+    border-radius:12px;
+    padding:10px 14px 14px 14px;
+    min-width:150px;
+    text-align:center;
   }
   .scoreBox h3{margin:0 0 4px;font-size:12px;color:var(--muted)}
   .scoreBox .val{font-size:22px;font-weight:800}
   .good{color:var(--good)}
   .warn{color:var(--warn)}
-  .badc{color:var(--bad)} /* avoid conflict with .btn.bad */
+  .badc{color:var(--bad)} /* class name 'bad' already used for button; avoid collision */
+
+  /* Circular score rings */
+  .scoreRing{
+    position:relative;
+    width:64px;
+    height:64px;
+    margin:4px auto 0 auto;
+  }
+  .ringSvg{
+    width:100%;
+    height:100%;
+    display:block;
+    transform:rotate(-90deg); /* start arc at top */
+  }
+  .ringBg,
+  .ringFg{
+    fill:none;
+    stroke-width:4;
+  }
+  .ringBg{
+    stroke:#233044;
+  }
+  .ringFg{
+    stroke:var(--accent);
+    stroke-linecap:round;
+    stroke-dasharray:113px;
+    stroke-dashoffset:113px;
+    transition:stroke-dashoffset .3s ease, stroke .3s ease;
+  }
+  .scoreRing .val{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:20px;
+    font-weight:800;
+  }
+  .scoreRing.good .ringFg{ stroke:var(--good); }
+  .scoreRing.warn .ringFg{ stroke:var(--warn); }
+  .scoreRing.badc .ringFg{ stroke:var(--bad); }
 
   .stats{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-top:12px;
   }
-  .card{background:#101520;border:1px solid #233044;border-radius:12px;padding:10px}
+  .card{
+    background:#101520;
+    border:1px solid #233044;
+    border-radius:12px;
+    padding:10px;
+  }
   .card h3{margin:0 0 2px;font-size:12px;color:var(--muted)}
   .card .val{font-size:18px;font-weight:700}
 
   .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
-  .pchip{background:#0f1a28;border:1px solid #223045;border-radius:10px;padding:8px}
+  .pchip{
+    background:#0f1a28;
+    border:1px solid #223045;
+    border-radius:10px;
+    padding:8px;
+  }
   .pchip h4{margin:0 0 4px;font-size:11px;color:#9ab7d6}
   .pchip div{font-size:13px;font-weight:700}
 
   .periods{
-    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:4px;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    margin-top:4px;
   }
-  .chip{text-align:center;padding:10px 8px;border-radius:10px;border:1px solid #2a3444;background:#152030;font-weight:700;cursor:pointer;user-select:none}
-  .chip.active{background:#1b3352;border-color:#2f5e9a;color:#cfe5ff}
+  .chip{
+    text-align:center;
+    padding:10px 8px;
+    border-radius:10px;
+    border:1px solid #2a3444;
+    background:#152030;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+  }
+  .chip.active{
+    background:#1b3352;
+    border-color:#2f5e9a;
+    color:#cfe5ff;
+  }
 
   .log{
-    margin-top:10px; max-height:180px; overflow:auto; border:1px solid #233044; border-radius:12px;
-    padding:8px; background:#0f141d;
+    margin-top:10px;
+    max-height:180px;
+    overflow:auto;
+    border:1px solid #233044;
+    border-radius:12px;
+    padding:8px;
+    background:#0f141d;
   }
-  .log .item{font-size:13px;padding:6px 4px;border-bottom:1px dashed #202b3b}
+  .log .item{
+    font-size:13px;
+    padding:6px 4px;
+    border-bottom:1px dashed #202b3b;
+  }
   .log .item:last-child{border-bottom:none}
 
-  .foot-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .foot-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:10px;
+  }
+
   .small{font-size:12px;color:var(--muted)}
   .score{font-size:44px;font-weight:800;letter-spacing:1px}
   .hidden{display:none}
-  .banner{margin-top:8px;padding:8px 10px;border-radius:10px;background:#0e1a2a;border:1px solid #224064;color:#cfe5ff;font-size:12px}
+  .banner{
+    margin-top:8px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#0e1a2a;
+    border:1px solid #224064;
+    color:#cfe5ff;
+    font-size:12px;
+  }
 
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
-  .modal .box{background:#0e1320;border:1px solid #2a3a55;border-radius:12px;max-width:520px;width:100%;padding:12px}
-  .modal textarea{width:100%;height:220px;background:#0b1220;color:#e8ecf1;border:1px solid #243248;border-radius:10px;padding:8px;font-size:14px}
+  .modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:9999;
+  }
+  .modal .box{
+    background:#0e1320;
+    border:1px solid #2a3a55;
+    border-radius:12px;
+    max-width:520px;
+    width:100%;
+    padding:12px;
+  }
+  .modal textarea{
+    width:100%;
+    height:220px;
+    background:#0b1220;
+    color:#e8ecf1;
+    border:1px solid #243248;
+    border-radius:10px;
+    padding:8px;
+    font-size:14px;
+  }
   .rowbtn{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
   .mini{font-size:11px;color:#a6b3c2}
 
-  .pickerGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
-  .pickerBtn{background:#152033;border:1px solid #2a3c5a;border-radius:10px;padding:12px 8px;text-align:center;font-weight:800;cursor:pointer;user-select:none}
-  .pickerBtn.selected{outline:2px solid var(--accent);background:#13243b}
+  .pickerGrid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+    margin-top:8px;
+  }
+  .pickerBtn{
+    background:#152033;
+    border:1px solid #2a3c5a;
+    border-radius:10px;
+    padding:12px 8px;
+    text-align:center;
+    font-weight:800;
+    cursor:pointer;
+    user-select:none;
+  }
+  .pickerBtn.selected{
+    outline:2px solid var(--accent);
+    background:#13243b;
+  }
 
   .undoList{max-height:300px;overflow:auto;margin-top:6px}
-  .undoRow{background:#10182a;border:1px solid #22324a;border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer}
+  .undoRow{
+    background:#10182a;
+    border:1px solid #22324a;
+    border-radius:10px;
+    padding:10px;
+    margin-bottom:8px;
+    cursor:pointer;
+  }
   .undoRow:active{transform:scale(.99)}
 
   .toast{
-    position:fixed; left:50%; transform:translateX(-50%); bottom:18px;
-    background:#0f1e32;border:1px solid #274468;color:#d9ecff;padding:10px 12px;border-radius:12px;
-    font-size:13px; display:none; z-index:10000;
+    position:fixed;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:18px;
+    background:#0f1e32;
+    border:1px solid #274468;
+    color:#d9ecff;
+    padding:10px 12px;
+    border-radius:12px;
+    font-size:13px;
+    display:none;
+    z-index:10000;
   }
   .toast button{margin-left:8px}
 
@@ -176,24 +357,26 @@
   th,td{border:1px solid #233044;padding:6px 8px;font-size:12px}
   th{background:#0f1a28;color:#cfe5ff;text-align:left}
 
+  /* Debug panel lines */
   .debugCard .line{font-size:12px;color:#b8c8dc;margin-top:4px;word-break:break-word}
+
   /* Collapsible debug */
-details.debugCard { padding: 0; }
-details.debugCard > summary{
-  list-style: none;
-  cursor: pointer;
-  padding: 10px 12px;
-  font-size: 12px;
-  color: var(--muted);
-  border-bottom: 1px solid #233044;
-  user-select: none;
-}
-details.debugCard[open] > summary{
-  color: #cfe5ff;
-  border-bottom-color: #2f5e9a;
-}
-details.debugCard summary::-webkit-details-marker{ display:none; }
-details.debugCard .line{ padding: 10px 12px; }
+  details.debugCard { padding: 0; }
+  details.debugCard > summary{
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid #233044;
+    user-select: none;
+  }
+  details.debugCard[open] > summary{
+    color: #cfe5ff;
+    border-bottom-color: #2f5e9a;
+  }
+  details.debugCard summary::-webkit-details-marker{ display:none; }
+  details.debugCard .line{ padding: 10px 12px; }
 </style>
 </head>
 <body>
@@ -202,19 +385,21 @@ details.debugCard .line{ padding: 10px 12px; }
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.7.3</div>
+      <div class="tag" id="gameMetaTag">New game • v3.7.1</div>
     </div>
   </header>
 
   <!-- Floating scoreboard -->
-  <div class="livebar" id="livebar">
-    <div class="livebar-grid">
-      <div class="live-metric live-top">GF: <span id="liveGF">0</span></div>
-      <div class="livebar-title">Scoreboard</div>
-      <div class="live-metric live-top">GA: <span id="liveGA">0</span></div>
-
-      <div class="live-metric live-sub">SF: <span id="liveSF">0</span></div>
-      <div class="live-metric live-sub">SA: <span id="liveSA">0</span></div>
+  <div class="livebar">
+    <div class="livebar-main">
+      <div>GF: <span id="liveGF">0</span></div>
+      <div>Scoreboard</div>
+      <div>GA: <span id="liveGA">0</span></div>
+    </div>
+    <div class="livebar-sub">
+      <div>SF: <span id="liveSF">0</span></div>
+      <div></div>
+      <div>SA: <span id="liveSA">0</span></div>
     </div>
   </div>
 
@@ -237,13 +422,12 @@ details.debugCard .line{ padding: 10px 12px; }
         </select>
       </div>
     </div>
-
-    <div class="periodRow" style="margin-top:8px;">
-      <div class="col dateCol">
+    <div class="row" style="margin-top:8px;">
+      <div class="col">
         <label for="date">Date</label>
         <input id="date" type="date">
       </div>
-      <div class="col periodCol">
+      <div class="col">
         <label>Current Period</label>
         <div class="periods" id="periodChips">
           <div class="chip active" data-p="1" role="button" aria-pressed="true">1</div>
@@ -260,38 +444,51 @@ details.debugCard .line{ padding: 10px 12px; }
   <!-- Main Controls -->
   <section class="panel">
     <div class="grid">
+      <!-- Row 1 -->
       <button class="btn shot" id="btnShot" type="button">Shot (Saved)</button>
       <button class="btn big" id="btnBigSave" type="button">Big Save</button>
-
+      <!-- Row 2 -->
       <button class="btn goal" id="btnGoal" type="button">Goal</button>
       <button class="btn soft" id="btnSoftGoal" type="button">Soft Goal</button>
-
+      <!-- Row 3 -->
       <button class="btn smother" id="btnSmother" type="button">Smother</button>
       <button class="btn bad" id="btnBadRebound" type="button">Bad Rebound</button>
-
+      <!-- Row 4 -->
       <button class="btn" id="btnForShot" type="button">Our Shot</button>
       <button class="btn" id="btnForGoal" type="button">Our Goal</button>
-
+      <!-- Row 5 (team misc) -->
       <button class="btn team" id="btnBreakaway" type="button">Breakaway Against</button>
       <button class="btn team" id="btnDZTurnover" type="button">D-Zone Turnover</button>
-
+      <!-- Row 6 -->
       <button class="btn undo" id="btnUndo" type="button" title="Tap: undo last • Long-press: choose from last 5">Undo</button>
       <button class="btn period" id="btnNextPeriod" type="button">Next Period</button>
     </div>
 
-    <!-- Centered live Goalie/Team scores -->
+    <!-- Centered live Goalie/Team scores with arcs -->
     <div class="scoresRow" id="scoresRow">
       <div class="scoreBox">
         <h3>Goalie Score</h3>
-        <div class="val" id="gsLive">—</div>
+        <div class="scoreRing" id="gsRing">
+          <svg viewBox="0 0 44 44" class="ringSvg" aria-hidden="true">
+            <circle class="ringBg" cx="22" cy="22" r="18"></circle>
+            <circle class="ringFg" id="gsArc" cx="22" cy="22" r="18"></circle>
+          </svg>
+          <div class="val" id="gsLive">—</div>
+        </div>
       </div>
       <div class="scoreBox">
         <h3>Team Score</h3>
-        <div class="val" id="tsLive">—</div>
+        <div class="scoreRing" id="tsRing">
+          <svg viewBox="0 0 44 44" class="ringSvg" aria-hidden="true">
+            <circle class="ringBg" cx="22" cy="22" r="18"></circle>
+            <circle class="ringFg" id="tsArc" cx="22" cy="22" r="18"></circle>
+          </svg>
+          <div class="val" id="tsLive">—</div>
+        </div>
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats (supporting metrics) -->
     <div class="stats" id="stats">
       <div class="card"><h3>Saves</h3><div class="val" id="savesVal">0</div></div>
       <div class="card"><h3>Save %</h3><div class="val" id="svVal">—</div></div>
@@ -304,22 +501,23 @@ details.debugCard .line{ padding: 10px 12px; }
       <div class="card"><h3>D-Zone TO</h3><div class="val" id="dzVal">0</div></div>
     </div>
 
-<!-- Debug (collapsible) -->
-<details class="card debugCard" id="debugWrap" style="margin-top:8px;">
-  <summary>Live Debug</summary>
-  <div class="line" id="debugGoalieLine">Goalie: —</div>
-  <div class="line" id="debugTeamLine">Team: —</div>
-</details>
+    <!-- Debug: collapsible -->
+    <details class="card debugCard" id="debugWrap" style="margin-top:8px;">
+      <summary>Live Debug</summary>
+      <div class="line" id="debugGoalieLine">Goalie: —</div>
+      <div class="line" id="debugTeamLine">Team: —</div>
+    </details>
 
     <div class="pgrid" id="periodSummary"></div>
     <div class="log" id="log"></div>
 
     <div class="foot-actions">
-      <button class="btn end" id="btnEnd" type="button" aria-controls="summaryPanel">End Game & Score</button>
+      <button class="btn end" id="btnEnd" type="button">End Game &amp; Score</button>
       <button class="btn undo" id="btnReset" type="button">New Game</button>
     </div>
 
-    <div class="row" style="margin-top:10px;gap:10px;">
+    <!-- centered bottom actions -->
+    <div class="row" style="margin-top:10px;gap:10px;justify-content:center;">
       <button class="btn" id="btnExportGameCSV" type="button">Export Game CSV</button>
       <button class="btn" id="btnCopySummary" type="button">Copy Summary</button>
     </div>
@@ -461,7 +659,7 @@ details.debugCard .line{ padding: 10px 12px; }
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=373'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3701'));
 }
 
 /* ===== IndexedDB KV helper ===== */
@@ -504,7 +702,7 @@ const ROSTER_KEY = 'team-tracker-roster';
 const state = {
   opponent:'', level:'U11', date:null, period:1,
   startedAt:new Date().toISOString(), gameId:Math.random().toString(36).slice(2),
-  // Events: {id,type,tISO,period,player?,assist?,ga_ctx?,ga_cause?,strength?,goodRebound?,onIce?,forOnIce?}
+  // Events: {id,type,tISO,period,player?,assist?,ga_ctx?,ga_cause?,ga_ba?,ga_dz?,ga_br?,strength?,goodRebound?,onIce?,forOnIce?}
   events:[],
   countsA:{shots:0, goals:0, softGoals:0, smothers:0, badRebounds:0, bigSaves:0},
   countsF:{shots:0, goals:0},
@@ -568,24 +766,6 @@ function compressUnknown(arr){
   const rest = arr.filter(x=>x!=='Unknown');
   return unknowns ? [...rest, `Unknown×${unknowns}`] : rest;
 }
-
-/* ===== Toast (auto-dismiss + global dismiss on action) ===== */
-let toastTimer=null;
-function showToast(msg){
-  const t = $('toast');
-  t.firstChild.nodeValue = msg + ' ';
-  t.style.display = 'block';
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, 4000);
-}
-function hideToast(){
-  const t = $('toast');
-  t.style.display = 'none';
-  if (toastTimer){ clearTimeout(toastTimer); toastTimer=null; }
-}
-['click','touchstart','keydown','pointerdown','scroll'].forEach(evt=>{
-  window.addEventListener(evt, ()=>{ if(document.getElementById('undoModal').style.display!=='flex') hideToast(); }, {passive:true});
-});
 
 /* ===== Event accounting ===== */
 function bump(type, period){
@@ -658,7 +838,6 @@ function clearGoodPendingFor(id){
 
 /* ===== Add / Undo ===== */
 function addEvent(type, meta={}){
-  hideToast(); // ensure toast never blocks UX
   const ev = {
     id: ++state.lastEventId,
     type,
@@ -670,26 +849,29 @@ function addEvent(type, meta={}){
   state.events.push(ev);
   bump(type, state.period);
 
-  if (type === 'goal' || type === 'soft_goal') tagGACause(ev);
+  if (type === 'goal' || type === 'soft_goal') {
+    tagGACause(ev); // tag cause before render
+  }
 
   save();
   renderAll();
   vibrate();
 
-  if (type === 'shot' || type === 'big_save') scheduleGoodReboundCredit(ev.id);
-  if (type === 'goal' || type === 'soft_goal') openGAContext(ev);
+  if (type === 'shot' || type === 'big_save') {
+    scheduleGoodReboundCredit(ev.id);
+  }
+  if (type === 'goal' || type === 'soft_goal') {
+    openGAContext(ev);
+  }
 
   return ev;
 }
 function undo(){
-  hideToast();
   const ev = state.events.pop();
   if(!ev) return;
   revert(ev);
   renderAll();
   vibrate(15);
-  lastRemoved = ev;
-  showToast('Removed.');
 }
 function revert(ev){
   clearGoodPendingFor(ev.id);
@@ -724,14 +906,15 @@ function revert(ev){
   save();
 }
 
-/* ===== Undo interactions (tap vs hold) ===== */
+/* ===== Undo interactions (pointer-safe) ===== */
 let undoHoldTimer = null;
 let undoHeld = false;
 let undoPointerActive = false;
 
 function startUndoHold(){
   if (undoPointerActive) return;
-  undoPointerActive = true; undoHeld = false;
+  undoPointerActive = true;
+  undoHeld = false;
 
   undoHoldTimer = setTimeout(() => {
     undoHeld = true;
@@ -742,13 +925,22 @@ function finishUndo(){
   if (!undoPointerActive) return;
   undoPointerActive = false;
 
-  if (undoHoldTimer){ clearTimeout(undoHoldTimer); undoHoldTimer = null; }
-  if (!undoHeld){ undo(); }
+  if (undoHoldTimer){
+    clearTimeout(undoHoldTimer);
+    undoHoldTimer = null;
+  }
+  if (!undoHeld){
+    undo();
+  }
 }
 function cancelUndoHold(){
   if (!undoPointerActive) return;
   undoPointerActive = false;
-  if (undoHoldTimer){ clearTimeout(undoHoldTimer); undoHoldTimer = null; }
+
+  if (undoHoldTimer){
+    clearTimeout(undoHoldTimer);
+    undoHoldTimer = null;
+  }
 }
 
 const undoBtn = $('btnUndo');
@@ -759,16 +951,21 @@ undoBtn.addEventListener('pointercancel', cancelUndoHold);
 
 /* ===== Undo modal & toast ===== */
 let lastRemoved = null;
+let toastTimer = null;
 
 function showUndoModal(){
-  hideToast();
   const listEl = $('undoList');
   const recent = state.events.slice(-5);
   if (!recent.length){
     listEl.innerHTML = `<div class="small">No events to remove.</div>`;
   } else {
     listEl.innerHTML = recent
-      .map(ev => `<div class="undoRow" data-id="${ev.id}">P${ev.period} • ${fmtTime(ev.tISO)} — ${labelFor(ev)}</div>`)
+      .map(ev => {
+        const label = labelFor(ev);
+        return `<div class="undoRow" data-id="${ev.id}">
+          P${ev.period} • ${fmtTime(ev.tISO)} — ${label}
+        </div>`;
+      })
       .reverse()
       .join('');
   }
@@ -795,14 +992,40 @@ $('undoClose').addEventListener('click', () => {
   $('undoModal').style.display = 'none';
 });
 
-$('toastRestore').addEventListener('click', () => {
-  if (!lastRemoved) { hideToast(); return; }
-  const ev = lastRemoved; lastRemoved = null;
+function showToast(msg){
+  const t = $('toast');
+  t.firstChild.nodeValue = msg + ' ';
+  t.style.display = 'block';
 
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    hideToast();
+  }, 3500);
+}
+function hideToast(){
+  const t = $('toast');
+  t.style.display = 'none';
+  if (toastTimer){
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+}
+
+$('toastRestore').addEventListener('click', () => {
+  if (!lastRemoved) {
+    hideToast();
+    return;
+  }
+  const ev = lastRemoved;
+  lastRemoved = null;
+
+  // Restore into correct chronological position
   state.events.push(ev);
   state.events.sort((a,b)=>new Date(a.tISO) - new Date(b.tISO));
   rebuildFromEvents();
-  save(); renderAll(); hideToast();
+  save();
+  renderAll();
+  hideToast();
 });
 
 /* ===== Labels ===== */
@@ -817,19 +1040,26 @@ function labelFor(ev){
     .replace(/_/g,' ');
 
   if ((ev.type === 'for_shot' || ev.type === 'for_goal') && ev.player){
-    if (ev.player !== 'Unknown' && ev.player !== '?') label += ` (#${ev.player})`;
+    if (ev.player !== 'Unknown' && ev.player !== '?') {
+      label += ` (#${ev.player})`;
+    }
   }
   if (ev.type === 'for_goal' && ev.assist){
-    if (ev.assist === 'None' || ev.assist === 'Unknown'){ label += ' A:—'; }
-    else { label += ` A:#${ev.assist}`; }
+    if (ev.assist === 'None' || ev.assist === 'Unknown'){
+      label += ' A:—';
+    } else {
+      label += ` A:#${ev.assist}`;
+    }
   }
   if (ev.type === 'for_goal' && Array.isArray(ev.forOnIce) && ev.forOnIce.length){
     label += ` [For on-ice: ${compressUnknown(ev.forOnIce).join(', ')}]`;
   }
-  if ((ev.type === 'goal' || ev.type === 'soft_goal') && Array.isArray(ev.onIce) && ev.onIce.length){
+  if ((ev.type === 'goal' || ev.type === 'soft_goal') &&
+      Array.isArray(ev.onIce) && ev.onIce.length){
     label += ` [On-ice: ${compressUnknown(ev.onIce).join(', ')}]`;
   }
-  if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') && ev.strength && ev.strength !== 'EV') {
+  if ((ev.type === 'for_goal' || ev.type === 'goal' || ev.type === 'soft_goal') &&
+      ev.strength && ev.strength !== 'EV') {
     label += ` [${ev.strength}]`;
   }
   if ((ev.type === 'goal' || ev.type === 'soft_goal') && ev.ga_ctx){
@@ -841,7 +1071,9 @@ function labelFor(ev){
     if (parts.includes('BA')) causes.push('Breakaway');
     if (parts.includes('DZ')) causes.push('Turnover');
     if (parts.includes('BR')) causes.push('Bad Rebound');
-    if (causes.length){ label += ` <${causes.join('/')}>`; }
+    if (causes.length){
+      label += ` <${causes.join('/')}>`;
+    }
   }
   return label;
 }
@@ -861,13 +1093,25 @@ $('gaGrid').addEventListener('click', e=>{
   save();
   $('gaOverlay').style.display = 'none';
   renderAll();
-  openMultiPicker({ title:'Select FIVE players on ice (GA)', max:5, event:lastGAEvent, field:'onIce', exclude:[] });
+  openMultiPicker({
+    title: 'Select FIVE players on ice (GA)',
+    max: 5,
+    event: lastGAEvent,
+    field: 'onIce',
+    exclude: []
+  });
   lastGAEvent = null;
 });
 $('gaSkip').addEventListener('click', ()=>{
   $('gaOverlay').style.display='none';
   if(lastGAEvent){
-    openMultiPicker({ title:'Select FIVE players on ice (GA)', max:5, event:lastGAEvent, field:'onIce', exclude:[] });
+    openMultiPicker({
+      title:'Select FIVE players on ice (GA)',
+      max:5,
+      event:lastGAEvent,
+      field:'onIce',
+      exclude:[]
+    });
     lastGAEvent = null;
   }
 });
@@ -876,7 +1120,9 @@ function tagGACause(gaEv){
   const tGA = new Date(gaEv.tISO).getTime();
   const lookback = tGA - 10000;
 
-  let hasBA = false, hasDZ = false, hasBR = false;
+  let hasBA = false;
+  let hasDZ = false;
+  let hasBR = false;
 
   for (const ev of state.events){
     const t = new Date(ev.tISO).getTime();
@@ -896,9 +1142,23 @@ function tagGACause(gaEv){
 }
 
 /* ===== Generic Multi Picker ===== */
-let multiPick = { selected:new Set(), unknowns:0, max:5, exclude:new Set(), eventRef:null, field:'onIce' };
+let multiPick = {
+  selected: new Set(),
+  unknowns: 0,
+  max: 5,
+  exclude: new Set(),
+  eventRef: null,
+  field: 'onIce'
+};
 function openMultiPicker({title, max, event, field, exclude}){
-  multiPick = { selected:new Set(), unknowns:0, max, exclude:new Set(exclude||[]), eventRef:event, field };
+  multiPick = {
+    selected:new Set(),
+    unknowns:0,
+    max,
+    exclude:new Set(exclude||[]),
+    eventRef:event,
+    field
+  };
   $('onIceTitle').textContent = title;
   $('onIceMax').textContent = String(max);
   $('onIceModal').style.display='flex';
@@ -910,9 +1170,12 @@ function buildOnIceGrid(){
   const uniq = Array.from(new Set(roster))
     .filter(n=>!multiPick.exclude.has(n))
     .sort((a,b)=>{
-      const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+      const na=+a, nb=+b;
+      const an=isNaN(na), bn=isNaN(nb);
       if(an&&bn) return (''+a).localeCompare(''+b);
-      if(an) return 1; if(bn) return -1; return na-nb;
+      if(an) return 1;
+      if(bn) return -1;
+      return na-nb;
     });
   $('onIceGrid').innerHTML = uniq.length
     ? uniq.map(n=>`<div class="pickerBtn ${multiPick.selected.has(n)?'selected':''}" data-n="${n}">#${n}</div>`).join('')
@@ -926,15 +1189,38 @@ function updateOnIceMeta(){
 $('onIceGrid').addEventListener('click', e=>{
   const b = e.target.closest('.pickerBtn'); if(!b) return;
   const n = b.dataset.n;
-  if(multiPick.selected.has(n)){ multiPick.selected.delete(n); b.classList.remove('selected'); }
-  else { if(totalSelected()>=multiPick.max) return; multiPick.selected.add(n); b.classList.add('selected'); }
+  if(multiPick.selected.has(n)){
+    multiPick.selected.delete(n);
+    b.classList.remove('selected');
+  }else{
+    if(totalSelected()>=multiPick.max) return;
+    multiPick.selected.add(n);
+    b.classList.add('selected');
+  }
   updateOnIceMeta();
 });
-$('onIceUnknownPlus').addEventListener('click', ()=>{ if(totalSelected()<multiPick.max){ multiPick.unknowns += 1; updateOnIceMeta(); }});
-$('onIceUnknownMinus').addEventListener('click', ()=>{ if(multiPick.unknowns>0){ multiPick.unknowns -= 1; updateOnIceMeta(); }});
-$('onIceClear').addEventListener('click', ()=>{ multiPick.selected.clear(); multiPick.unknowns = 0; buildOnIceGrid(); updateOnIceMeta(); });
+$('onIceUnknownPlus').addEventListener('click', ()=>{
+  if(totalSelected()>=multiPick.max) return;
+  multiPick.unknowns += 1;
+  updateOnIceMeta();
+});
+$('onIceUnknownMinus').addEventListener('click', ()=>{
+  if(multiPick.unknowns>0){
+    multiPick.unknowns -= 1;
+    updateOnIceMeta();
+  }
+});
+$('onIceClear').addEventListener('click', ()=>{
+  multiPick.selected.clear();
+  multiPick.unknowns = 0;
+  buildOnIceGrid();
+  updateOnIceMeta();
+});
 $('onIceUse').addEventListener('click', ()=>{
-  if (!multiPick.eventRef) { $('onIceModal').style.display = 'none'; return; }
+  if (!multiPick.eventRef) {
+    $('onIceModal').style.display = 'none';
+    return;
+  }
   const ev = multiPick.eventRef;
   const arr = [...multiPick.selected];
   for (let i = 0; i < multiPick.unknowns; i++) arr.push('Unknown');
@@ -944,10 +1230,16 @@ $('onIceUse').addEventListener('click', ()=>{
   multiPick.eventRef = null;
   renderAll();
 
-  if (ev.type === 'goal' || ev.type === 'soft_goal') openStrengthPicker(ev, 'Goal Against — PP/SH (optional)');
-  else if (ev.type === 'for_goal') openStrengthPicker(ev, 'Our Goal — PP/SH (optional)');
+  if (ev.type === 'goal' || ev.type === 'soft_goal') {
+    openStrengthPicker(ev, 'Goal Against — PP/SH (optional)');
+  } else if (ev.type === 'for_goal') {
+    openStrengthPicker(ev, 'Our Goal — PP/SH (optional)');
+  }
 });
-$('onIceCancel').addEventListener('click', ()=>{ $('onIceModal').style.display='none'; multiPick.eventRef=null; });
+$('onIceCancel').addEventListener('click', ()=>{
+  $('onIceModal').style.display='none';
+  multiPick.eventRef=null;
+});
 
 /* ===== Strength Picker (PP/SH/EV, optional) ===== */
 let strengthTarget = null;
@@ -960,33 +1252,48 @@ document.querySelector('#strengthModal .pickerGrid').addEventListener('click', e
   const btn = e.target.closest('.pickerBtn');
   if(!btn || !strengthTarget) return;
   const val = btn.dataset.strength;
-  strengthTarget.strength = (val==='PP'||val==='SH')?val:'EV';
+  if(val === 'EV') strengthTarget.strength = 'EV';
+  else if(val === 'PP') strengthTarget.strength = 'PP';
+  else if(val === 'SH') strengthTarget.strength = 'SH';
   save();
   $('strengthModal').style.display='none';
   strengthTarget = null;
 });
-$('strengthSkip').addEventListener('click', ()=>{ $('strengthModal').style.display='none'; strengthTarget = null; });
+$('strengthSkip').addEventListener('click', ()=>{
+  $('strengthModal').style.display='none';
+  strengthTarget = null;
+});
 
 /* ===== Plus/Minus ===== */
 function computePlusMinus(){
   const pm = new Map();
-  function inc(n, delta){ if(n==='Unknown' || n==='?' || !n) return; pm.set(n, (pm.get(n)||0) + delta); }
+  function inc(n, delta){
+    if(n==='Unknown' || n==='?' || !n) return;
+    pm.set(n, (pm.get(n)||0) + delta);
+  }
   for(const ev of state.events){
     if(ev.type==='for_goal'){
       const set = new Set();
       if(ev.player && ev.player!=='?' && ev.player!=='Unknown') set.add(ev.player);
       if(ev.assist && ev.assist!=='None' && ev.assist!=='Unknown' && ev.assist!=='?') set.add(ev.assist);
-      if(Array.isArray(ev.forOnIce)){ for(const p of ev.forOnIce){ if(p!=='Unknown') set.add(p); } }
+      if(Array.isArray(ev.forOnIce)){
+        for(const p of ev.forOnIce){ if(p!=='Unknown') set.add(p); }
+      }
       for(const n of set) inc(n, +1);
     }
     if(ev.type==='goal' || ev.type==='soft_goal'){
-      if(Array.isArray(ev.onIce)){ for(const n of ev.onIce){ if(n!=='Unknown') inc(n, -1); } }
+      if(Array.isArray(ev.onIce)){
+        for(const n of ev.onIce){ if(n!=='Unknown') inc(n, -1); }
+      }
     }
   }
   const order = [...pm.keys()].sort((a,b)=>{
-    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    const na=+a, nb=+b;
+    const an=isNaN(na), bn=isNaN(nb);
     if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1; if(bn) return -1; return na-nb;
+    if(an) return 1;
+    if(bn) return -1;
+    return na-nb;
   });
   return {pm, order};
 }
@@ -995,14 +1302,26 @@ function computePlusMinus(){
 function perPlayerTallies(){
   const shots = new Map(), goals = new Map(), assists = new Map(), all=new Set();
   for(const ev of state.events){
-    if((ev.type==='for_shot' || ev.type==='for_goal') && ev.player){ shots.set(ev.player,(shots.get(ev.player)||0)+1); all.add(ev.player); }
-    if(ev.type==='for_goal' && ev.player){ goals.set(ev.player,(goals.get(ev.player)||0)+1); all.add(ev.player); }
-    if(ev.type==='for_goal' && ev.assist && ev.assist!=='None' && ev.assist!=='Unknown'){ assists.set(ev.assist,(assists.get(ev.assist)||0)+1); all.add(ev.assist); }
+    if((ev.type==='for_shot' || ev.type==='for_goal') && ev.player){
+      shots.set(ev.player,(shots.get(ev.player)||0)+1);
+      all.add(ev.player);
+    }
+    if(ev.type==='for_goal' && ev.player){
+      goals.set(ev.player,(goals.get(ev.player)||0)+1);
+      all.add(ev.player);
+    }
+    if(ev.type==='for_goal' && ev.assist && ev.assist!=='None' && ev.assist!=='Unknown'){
+      assists.set(ev.assist,(assists.get(ev.assist)||0)+1);
+      all.add(ev.assist);
+    }
   }
   const order=[...all].sort((a,b)=>{
-    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    const na=+a, nb=+b;
+    const an=isNaN(na), bn=isNaN(nb);
     if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1; if(bn) return -1; return na-nb;
+    if(an) return 1;
+    if(bn) return -1;
+    return na-nb;
   });
   return {shots, goals, assists, order};
 }
@@ -1038,23 +1357,32 @@ function computeGoalieScore(){
   const baseSV = prof.goalieBaseSV;
   const volumeFactor = clamp01(shots / (prof.minShots || 15));
 
+  // 1. Core shot-stopping vs age expectation (0–70)
   const svFloor = Math.max(0.50, baseSV - 0.25);
   const svCeil  = Math.min(0.98, baseSV + 0.15);
 
   let svNorm;
-  if (shots === 0) svNorm = 0.5;
-  else if (sv <= svFloor) svNorm = 0;
-  else if (sv >= svCeil) svNorm = 1;
-  else svNorm = (sv - svFloor) / (svCeil - svFloor);
+  if (shots === 0) {
+    svNorm = 0.5;
+  } else if (sv <= svFloor) {
+    svNorm = 0;
+  } else if (sv >= svCeil) {
+    svNorm = 1;
+  } else {
+    svNorm = (sv - svFloor) / (svCeil - svFloor);
+  }
 
   let scoreSV = 70 * svNorm;
   scoreSV = 35 + volumeFactor * (scoreSV - 35);
 
+  // 2. Soft goal penalty (0 to -20)
   const softGoals = C.softGoals || 0;
   const softPenalty = Math.max(-20, -8 * softGoals);
 
+  // 3. Contextual difficulty adjustment (-10 to +10)
   const gas = state.events.filter(e => e.type === 'goal' || e.type === 'soft_goal');
-  let hard = 0, soft = 0;
+  let hard = 0;
+  let soft = 0;
 
   for (const ev of gas){
     const ctx = ev.ga_ctx || '';
@@ -1062,6 +1390,8 @@ function computeGoalieScore(){
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
 
     let s = 0;
+
+    // Hard chance signals
     if (/Screen/i.test(ctx))            s += 0.8;
     if (/Deflection/i.test(ctx))        s += 1.0;
     if (/Cross-Crease/i.test(ctx))      s += 0.8;
@@ -1072,6 +1402,7 @@ function computeGoalieScore(){
     if (cause.includes('BA'))           s += 1.0;
     if (cause.includes('DZ'))           s += 0.4;
 
+    // Bad / avoidable signals
     if (ev.type === 'soft_goal')        s -= 1.5;
     if (st === 'PP')                    s -= 0.7;
     if (cause.includes('BR'))           s -= 0.8;
@@ -1083,10 +1414,14 @@ function computeGoalieScore(){
   let ctxAdj = 0;
   if (gas.length){
     const net = (hard - soft) / gas.length;
-    if (net > 0) ctxAdj = Math.min(10, net * 4);
-    else if (net < 0) ctxAdj = Math.max(-10, net * 4);
+    if (net > 0){
+      ctxAdj = Math.min(10, net * 4);
+    } else if (net < 0){
+      ctxAdj = Math.max(-10, net * 4);
+    }
   }
 
+  // 4. Rebound control (0–10)
   const goodRebounds = state.events.filter(e => e.goodRebound).length;
   const rebDen = (C.badRebounds || 0) + goodRebounds + (C.smothers || 0);
   let scoreRebound = 5;
@@ -1096,6 +1431,7 @@ function computeGoalieScore(){
   }
   scoreRebound *= volumeFactor;
 
+  // 5. Big saves (0–10)
   let scoreBig = 0;
   if (shots > 0){
     const big = C.bigSaves || 0;
@@ -1104,10 +1440,15 @@ function computeGoalieScore(){
   }
 
   let total = scoreSV + softPenalty + ctxAdj + scoreRebound + scoreBig;
-  total = Math.max(0, Math.min(100, total));
+
+  if (total < 0) total = 0;
+  if (total > 100) total = 100;
 
   return {
-    shots, ga, saves, sv,
+    shots,
+    ga,
+    saves,
+    sv,
     scoreSV: Math.round(scoreSV),
     softPenalty: Math.round(softPenalty),
     ctxAdj: Math.round(ctxAdj),
@@ -1151,7 +1492,8 @@ function computeTeamScore(){
   const modDZ = Math.min(12, 1.5*DZ);
 
   let total = Math.round(scoreSS + scoreFin + scoreImp + scoreStab - modBA - modDZ);
-  total = Math.max(0, Math.min(100, total));
+  if(total<0) total=0;
+  if(total>100) total=100;
 
   return {total, scoreSS, scoreFin, scoreImp, scoreStab, BA, DZ, SS, Fin};
 }
@@ -1164,20 +1506,44 @@ function shotShare(){
 /* ===== Render ===== */
 function updateMeta(){
   $('gameMetaTag').textContent =
-    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.7.3`;
+    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.7.1`;
 }
 function refreshStats(){
   const A = state.countsA, F = state.countsF, T = state.team;
   const K = computeGoalieScore();
   const Team = computeTeamScore();
 
+  // Live Goalie/Team scores (center row with circular arcs)
   const gs = $('gsLive'), ts = $('tsLive');
+  const gsRing = $('gsRing'), tsRing = $('tsRing');
+  const gsArc  = $('gsArc'),  tsArc  = $('tsArc');
+
   if (gs && ts){
     gs.textContent = K.total;
     ts.textContent = Team.total;
-    [gs,ts].forEach(el=>{ el.classList.remove('good','warn','badc'); });
-    gs.classList.add(K.total>=85?'good':K.total>=70?'warn':'badc');
-    ts.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'badc');
+
+    // Clear previous quality classes
+    [gs, ts, gsRing, tsRing].forEach(el=>{
+      if(!el) return;
+      el.classList.remove('good','warn','badc');
+    });
+
+    const goalieClass = K.total>=85 ? 'good' : K.total>=70 ? 'warn' : 'badc';
+    const teamClass   = Team.total>=85 ? 'good' : Team.total>=70 ? 'warn' : 'badc';
+
+    [gs, gsRing].forEach(el=>{ if(el) el.classList.add(goalieClass); });
+    [ts, tsRing].forEach(el=>{ if(el) el.classList.add(teamClass); });
+
+    // Update arc length (0–100 mapped onto 0–113px)
+    const CIRC = 113; // stroke length for r=18
+    if (gsArc){
+      const frac = Math.max(0, Math.min(1, (K.total || 0) / 100));
+      gsArc.style.strokeDashoffset = String(CIRC * (1 - frac));
+    }
+    if (tsArc){
+      const frac = Math.max(0, Math.min(1, (Team.total || 0) / 100));
+      tsArc.style.strokeDashoffset = String(CIRC * (1 - frac));
+    }
   }
 
   $('savesVal').textContent   = K.saves;
@@ -1196,7 +1562,10 @@ function refreshStats(){
     const svp = v.A_shots ? ((saves/v.A_shots).toFixed(3).slice(1)) : '—';
     const ourShp = v.F_shots ? ((v.F_goals/v.F_shots).toFixed(3).slice(1)) : '—';
     const title = p===4?'OT':`P${p}`;
-    return `<div class="pchip"><h4>${title}</h4><div>SF-SA ${v.F_shots}-${v.A_shots} • GF-GA ${v.F_goals}-${v.A_goals} • SV ${svp} • Sh% ${ourShp}</div></div>`;
+    return `<div class="pchip">
+      <h4>${title}</h4>
+      <div>SF-SA ${v.F_shots}-${v.A_shots} • GF-GA ${v.F_goals}-${v.A_goals} • SV ${svp} • Sh% ${ourShp}</div>
+    </div>`;
   }).join('');
   $('periodSummary').innerHTML = phtml;
 
@@ -1279,10 +1648,16 @@ function makePlusMinusTable(){
       </table>
     </div>`;
 }
+
+/* Narrower GA table: merge causes into one column */
 function buildGASummary(){
   const gas = state.events.filter(e=>e.type==='goal' || e.type==='soft_goal');
   if(!gas.length){
-    return `<div class="card"><h3>Goals Against Detail</h3><div class="small">No goals against.</div></div>`;
+    return `
+      <div class="card">
+        <h3>Goals Against Detail</h3>
+        <div class="small">No goals against.</div>
+      </div>`;
   }
   const rows = gas.map((ev,idx)=>{
     const when = fmtTime(ev.tISO);
@@ -1290,24 +1665,37 @@ function buildGASummary(){
     const rawSt = ev.strength || 'EV';
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
 
+    // Merge BA/DZ/BR into a readable "Cause" cell
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
     const parts = [];
-    if (cause.includes('BA')) parts.push('Breakaway');
-    if (cause.includes('DZ')) parts.push('Turnover');
-    if (cause.includes('BR')) parts.push('Bad Rebound');
+    if (cause.includes('BA') || ev.ga_ba) parts.push('Breakaway');
+    if (cause.includes('DZ') || ev.ga_dz) parts.push('Turnover');
+    if (cause.includes('BR') || ev.ga_br) parts.push('Bad Rebound');
     const causeStr = parts.length ? parts.join('; ') : '—';
 
-    return `<tr><td>${idx+1}</td><td>P${ev.period}</td><td>${when}</td><td>${ctx}</td><td>${st}</td><td>${causeStr}</td></tr>`;
+    return `<tr>
+      <td>${idx+1}</td>
+      <td>P${ev.period}</td>
+      <td>${when}</td>
+      <td>${ctx}</td>
+      <td>${st}</td>
+      <td>${causeStr}</td>
+    </tr>`;
   }).join('');
   return `
     <div class="card">
       <h3>Goals Against Detail</h3>
       <table style="margin-top:6px;">
-        <thead><tr><th>#</th><th>P</th><th>Time</th><th>Context</th><th>PP/SH</th><th>Cause</th></tr></thead>
+        <thead>
+          <tr>
+            <th>#</th><th>P</th><th>Time</th><th>Context</th><th>PP/SH</th><th>Cause</th>
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
+
 function buildReadableSummary(){
   const K = computeGoalieScore(), T = computeTeamScore();
   const F = state.countsF, A = state.countsA;
@@ -1315,10 +1703,29 @@ function buildReadableSummary(){
   const opponent = state.opponent || 'Unknown opponent';
   const level = state.level || 'U11';
 
-  const gaBA = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && (String(e.ga_cause||'').includes('BA')) ).length;
-  const gaDZ = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && (String(e.ga_cause||'').includes('DZ')) ).length;
-  const gaBR = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && (String(e.ga_cause||'').includes('BR')) ).length;
-  const gaOther = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && !String(e.ga_cause||'').match(/BA|DZ|BR/) ).length;
+  const gaBA = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_ba || cause.includes('BA');
+  }).length;
+  const gaDZ = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_dz || cause.includes('DZ');
+  }).length;
+  const gaBR = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_br || cause.includes('BR');
+  }).length;
+  const gaOther = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    const taggedBA = e.ga_ba || cause.includes('BA');
+    const taggedDZ = e.ga_dz || cause.includes('DZ');
+    const taggedBR = e.ga_br || cause.includes('BR');
+    return !taggedBA && !taggedDZ && !taggedBR;
+  }).length;
 
   const ourShPct = F.shots? ((F.goals/F.shots).toFixed(3).slice(1)) : '.000';
   const svPct = A.shots? ((Math.max(0,A.shots-A.goals)/A.shots).toFixed(3).slice(1)) : '.000';
@@ -1365,7 +1772,8 @@ function endGame(){
   $('summaryTitle').textContent = `Game Summary — ${title}`;
 
   const gsEl = $('goalieScoreNum'), tsEl = $('teamScoreNum');
-  gsEl.textContent = K.total; tsEl.textContent = Team.total;
+  gsEl.textContent = K.total;
+  tsEl.textContent = Team.total;
   [gsEl, tsEl].forEach(el=>el.classList.remove('good','warn','badc'));
   gsEl.classList.add(K.total>=85?'good':K.total>=70?'warn':'badc');
   tsEl.classList.add(Team.total>=85?'good':Team.total>=70?'warn':'badc');
@@ -1386,7 +1794,6 @@ function endGame(){
 
   $('summaryPanel').classList.remove('hidden');
   window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
-  showToast('Game ended. Summary generated.');
 }
 
 /* ===== CSV (per game only) ===== */
@@ -1396,10 +1803,29 @@ function safeName(s){
 function buildGameRow(K, Team){
   const F=state.countsF, A=state.countsA;
 
-  const gaBA = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && String(e.ga_cause||'').includes('BA')).length;
-  const gaDZ = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && String(e.ga_cause||'').includes('DZ')).length;
-  const gaBR = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && String(e.ga_cause||'').includes('BR')).length;
-  const gaOther = state.events.filter(e=> (e.type==='goal'||e.type==='soft_goal') && !String(e.ga_cause||'').match(/BA|DZ|BR/) ).length;
+  const gaBA = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_ba || cause.includes('BA');
+  }).length;
+  const gaDZ = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_dz || cause.includes('DZ');
+  }).length;
+  const gaBR = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    return e.ga_br || cause.includes('BR');
+  }).length;
+  const gaOther = state.events.filter(e=>{
+    if (e.type!=='goal' && e.type!=='soft_goal') return false;
+    const cause = typeof e.ga_cause === 'string' ? e.ga_cause : '';
+    const taggedBA = e.ga_ba || cause.includes('BA');
+    const taggedDZ = e.ga_dz || cause.includes('DZ');
+    const taggedBR = e.ga_br || cause.includes('BR');
+    return !taggedBA && !taggedDZ && !taggedBR;
+  }).length;
 
   return {
     date: state.date || new Date().toISOString().slice(0,10),
@@ -1471,10 +1897,19 @@ function openCopyModal(text){
   const ta = $('copyArea');
   ta.value = text || '';
   m.style.display='flex';
-  setTimeout(()=>{ ta.focus(); ta.setSelectionRange(0, ta.value.length); }, 30);
+  setTimeout(()=>{
+    ta.focus();
+    ta.setSelectionRange(0, ta.value.length);
+  }, 30);
 }
-function closeCopyModal(){ $('copyModal').style.display='none'; }
-$('btnCopySelect').addEventListener('click', ()=>{ const ta=$('copyArea'); ta.focus(); ta.setSelectionRange(0, ta.value.length); });
+function closeCopyModal(){
+  $('copyModal').style.display='none';
+}
+$('btnCopySelect').addEventListener('click', ()=>{
+  const ta = $('copyArea');
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+});
 $('btnCopyClose').addEventListener('click', closeCopyModal);
 
 function buildSummaryText(){
@@ -1483,10 +1918,14 @@ function buildSummaryText(){
   const main = tmp.textContent.replace(/\n{2,}/g, '\n').trim();
 
   const tblWrap = $('summaryTableWrap');
-  const tblText = tblWrap && tblWrap.innerText ? '\n\n' + tblWrap.innerText.trim() : '';
+  const tblText = tblWrap && tblWrap.innerText
+    ? '\n\n' + tblWrap.innerText.trim()
+    : '';
 
   const gaWrap = $('gaDetailWrap');
-  const gaText = gaWrap && gaWrap.innerText ? '\n\nGoals Against Detail\n' + gaWrap.innerText.trim() : '';
+  const gaText = gaWrap && gaWrap.innerText
+    ? '\n\nGoals Against Detail\n' + gaWrap.innerText.trim()
+    : '';
 
   return main + tblText + gaText;
 }
@@ -1501,9 +1940,12 @@ function saveRosterFromArea(){
   const lines=$('rosterArea').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const uniq = Array.from(new Set(lines));
   uniq.sort((a,b)=>{
-    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    const na=+a, nb=+b;
+    const an=isNaN(na), bn=isNaN(nb);
     if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1; if(bn) return -1; return na-nb;
+    if(an) return 1;
+    if(bn) return -1;
+    return na-nb;
   });
   state.roster=uniq;
   localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster));
@@ -1529,9 +1971,12 @@ function buildPickerGrid(){
     uniq = uniq.filter(n=>n!==pendingScorer);
   }
   uniq.sort((a,b)=>{
-    const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+    const na=+a, nb=+b;
+    const an=isNaN(na), bn=isNaN(nb);
     if(an&&bn) return (''+a).localeCompare(''+b);
-    if(an) return 1; if(bn) return -1; return na-nb;
+    if(an) return 1;
+    if(bn) return -1;
+    return na-nb;
   });
   grid.innerHTML = uniq.length
     ? uniq.map(n=>`<div class="pickerBtn" data-n="${n}">#${n}</div>`).join('')
@@ -1588,7 +2033,13 @@ function handlePickerSelection(num, allowAdd){
     pendingScorer=null;
     closePicker();
     setTimeout(()=>{
-      openMultiPicker({ title:'Pick the other THREE on-ice (Our Goal)', max:3, event:ev, field:'forOnIce', exclude });
+      openMultiPicker({
+        title:'Pick the other THREE on-ice (Our Goal)',
+        max:3,
+        event:ev,
+        field:'forOnIce',
+        exclude
+      });
     }, 60);
     return;
   }
@@ -1596,7 +2047,13 @@ function handlePickerSelection(num, allowAdd){
     const ev = addEvent('for_goal',{player:num});
     closePicker();
     setTimeout(()=>{
-      openMultiPicker({ title:'Pick the other THREE on-ice (Our Goal)', max:3, event:ev, field:'forOnIce', exclude:[num] });
+      openMultiPicker({
+        title:'Pick the other THREE on-ice (Our Goal)',
+        max:3,
+        event:ev,
+        field:'forOnIce',
+        exclude:[num]
+      });
     }, 60);
   }
 }
@@ -1680,9 +2137,21 @@ $('btnCopySummary').addEventListener('click', ()=>{
 });
 
 /* Inputs */
-$('opponent').addEventListener('input', e=>{ state.opponent=e.target.value; save(); updateMeta(); });
-$('level').addEventListener('change', e=>{ state.level=e.target.value; save(); updateMeta(); });
-$('date').addEventListener('change', e=>{ state.date=e.target.value; save(); updateMeta(); });
+$('opponent').addEventListener('input', e=>{
+  state.opponent=e.target.value;
+  save();
+  updateMeta();
+});
+$('level').addEventListener('change', e=>{
+  state.level=e.target.value;
+  save();
+  updateMeta();
+});
+$('date').addEventListener('change', e=>{
+  state.date=e.target.value;
+  save();
+  updateMeta();
+});
 $('periodChips').addEventListener('click', async e=>{
   const chip=e.target.closest('.chip'); if(!chip) return;
   const newP = Number(chip.dataset.p);
@@ -1702,7 +2171,6 @@ $('periodChips').addEventListener('click', async e=>{
       if(id==='pickerModal') pendingType=null;
       if(id==='onIceModal') multiPick.eventRef=null;
       if(id==='strengthModal') strengthTarget=null;
-      hideToast(); // any modal interaction hides stale toast
     }
   });
 });
@@ -1740,7 +2208,9 @@ function updateDebugLines(){
 
 /* extra saves */
 window.addEventListener('pagehide', save);
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState!=='visible') save(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState!=='visible') save();
+});
 setInterval(save, 4000);
 
 /* Init */
@@ -1750,11 +2220,16 @@ setInterval(save, 4000);
     const r = localStorage.getItem(ROSTER_KEY);
     state.roster = r ? JSON.parse(r) : [];
     state.roster.sort((a,b)=>{
-      const na=+a, nb=+b; const an=isNaN(na), bn=isNaN(nb);
+      const na=+a, nb=+b;
+      const an=isNaN(na), bn=isNaN(nb);
       if(an&&bn) return (''+a).localeCompare(''+b);
-      if(an) return 1; if(bn) return -1; return na-nb;
+      if(an) return 1;
+      if(bn) return -1;
+      return na-nb;
     });
-  }catch(_){ state.roster=[]; }
+  }catch(_){
+    state.roster=[];
+  }
   await persistStorage();
   const loaded = await load();
   if (loaded && Array.isArray(loaded.events)){
