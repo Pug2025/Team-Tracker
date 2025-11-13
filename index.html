@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.7.1)</title>
+<title>Team Tracker – iPhone (v3.7.2)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -414,16 +414,11 @@
   details.debugCard summary::-webkit-details-marker{ display:none; }
   details.debugCard .line{ padding: 10px 12px; }
 
-    /* Make Date and Current Period stack on narrow screens */
+  /* Date and Current Period: always stacked to avoid overlap */
   .date-period-row{
-    align-items:flex-start;
-  }
-
-  @media (max-width: 430px){
-    .date-period-row{
-      flex-direction:column;
-      gap:6px;
-    }
+    flex-direction:column;
+    gap:6px;
+    align-items:stretch;
   }
   
 </style>
@@ -434,7 +429,7 @@
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.7.1</div>
+      <div class="tag" id="gameMetaTag">New game • v3.7.2</div>
     </div>
   </header>
 
@@ -708,7 +703,7 @@
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3701'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3702'));
 }
 
 /* ===== IndexedDB KV helper ===== */
@@ -1555,7 +1550,7 @@ function shotShare(){
 /* ===== Render ===== */
 function updateMeta(){
   $('gameMetaTag').textContent =
-    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.7.1`;
+    `${state.opponent||'Opponent?'} • ${state.level||'U11'} • ${state.date||new Date().toISOString().slice(0,10)} • v3.7.2`;
 }
 function refreshStats(){
   const A = state.countsA, F = state.countsF, T = state.team;
