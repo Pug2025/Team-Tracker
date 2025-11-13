@@ -47,23 +47,59 @@
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
   .btn{
     -webkit-tap-highlight-color:transparent;
-    background:var(--btn2);color:var(--ink);border:none;
-    padding:16px 14px;border-radius:14px;font-size:16px;font-weight:600;
+    background:#171f2b;
+    color:var(--ink);
+    border:1px solid #2a3444;
+    padding:16px 14px;
+    border-radius:14px;
+    font-size:16px;
+    font-weight:600;
     box-shadow:0 6px 12px rgba(0,0,0,.22);
-    touch-action:manipulation;user-select:none;cursor:pointer;
+    touch-action:manipulation;
+    user-select:none;
+    cursor:pointer;
   }
   .btn:active{transform:scale(.98)}
-  .btn.shot{background:#1e2f47}
-  .btn.goal{background:#3a2230}
-  .btn.soft{background:#4b2430}
-  .btn.smother{background:#1d3b2a}
-  .btn.bad{background:#3b2a1d}
-  .btn.big{background:#1d2f3b}
-  .btn.undo{background:#2b3240}
-  .btn.period{background:#2a2f3a}
-  .btn.end{background:linear-gradient(180deg,#345e2f,#1f381c)}
-  .btn.roster{background:#20324a;padding:10px 12px;font-size:14px}
-  .btn.team{background:#2a2342}
+
+  /* semantic borders – all same base colour */
+  .btn.shot{                /* neutral */
+    border-color:#2a3444;
+  }
+  .btn.big, .btn.smother, .btn.forShot{  /* good */
+    border-color:var(--good);
+  }
+  .btn.goal,
+  .btn.bad,
+  .btn.team{                /* bad */
+    border-color:var(--bad);
+  }
+  .btn.soft{                /* very bad */
+    border-color:#ff2d55;
+  }
+  .btn#btnForShot,          /* Our Shot = good */
+  .btn#btnForGoal{          /* Our Goal = very good */
+    border-color:var(--good);
+  }
+  .btn#btnForGoal{          /* bump “very good” slightly */
+    box-shadow:0 0 0 1px rgba(53,199,89,.4), 0 6px 12px rgba(0,0,0,.22);
+  }
+
+  /* neutral controls */
+  .btn.undo,
+  .btn.period{
+    border-color:#2a3444;
+  }
+
+  .btn.end{
+    border-color:var(--good);
+  }
+
+  .btn.roster{
+    background:#20324a;
+    border-color:#2a3444;
+    padding:10px 12px;
+    font-size:14px;
+  }
   .btn.team:active,.btn.roster:active{transform:scale(.97)}
 
   /* Live floating scoreboard */
@@ -377,6 +413,19 @@
   }
   details.debugCard summary::-webkit-details-marker{ display:none; }
   details.debugCard .line{ padding: 10px 12px; }
+
+    /* Make Date and Current Period stack on narrow screens */
+  .date-period-row{
+    align-items:flex-start;
+  }
+
+  @media (max-width: 430px){
+    .date-period-row{
+      flex-direction:column;
+      gap:6px;
+    }
+  }
+  
 </style>
 </head>
 <body>
@@ -422,7 +471,7 @@
         </select>
       </div>
     </div>
-    <div class="row" style="margin-top:8px;">
+    <div class="row date-period-row" style="margin-top:8px;">      
       <div class="col">
         <label for="date">Date</label>
         <input id="date" type="date">
