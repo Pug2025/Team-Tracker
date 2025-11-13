@@ -1,17 +1,14 @@
-/* Team Tracker SW v3.7.0 */
-const CACHE = 'team-tracker-3-7-0';
-const ASSETS = [
+/* Team Tracker PWA SW — v3.7.3 */
+const CACHE_NAME = 'team-tracker-cache-v373';
+const CORE_ASSETS = [
   './',
-  './index.html',
-  './manifest.json'
-  // Add icons and any other static assets if served locally:
-  // './icons/icon-192.png',
-  // './icons/icon-512.png'
+  './index.html?v=373',
+  './manifest.json?v=373'
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
   );
   self.skipWaiting();
 });
@@ -19,7 +16,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.map(k => (k !== CACHE ? caches.delete(k) : null)))
+      Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k))))
     )
   );
   self.clients.claim();
@@ -27,22 +24,19 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  // Network-first for HTML (so updates flow), cache-first for others
-  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
-    e.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
-    );
-  } else {
-    e.respondWith(
-      caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
-        return res;
-      }))
-    );
-  }
+  if (req.method !== 'GET') return;
+
+  e.respondWith(
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req)
+        .then((netRes) => {
+          if (!netRes || netRes.status !== 200) return netRes;
+          const copy = netRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          return netRes;
+        })
+        .catch(() => cached);
+      return cached || fetchPromise;
+    })
+  );
 });
