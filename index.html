@@ -988,10 +988,15 @@ function cancelUndoHold(){
 }
 
 const undoBtn = $('btnUndo');
-undoBtn.addEventListener('pointerdown', startUndoHold);
-undoBtn.addEventListener('pointerup', finishUndo);
-undoBtn.addEventListener('pointerleave', cancelUndoHold);
-undoBtn.addEventListener('pointercancel', cancelUndoHold);
+if (undoBtn) {
+  undoBtn.addEventListener('pointerdown', startUndoHold);
+  undoBtn.addEventListener('pointerup', finishUndo);
+  undoBtn.addEventListener('pointerleave', cancelUndoHold);
+  undoBtn.addEventListener('pointercancel', cancelUndoHold);
+} else {
+  // Optional: basic debug breadcrumb if something’s off with the DOM / cache
+  console.warn('btnUndo not found – check cached HTML / service worker.');
+}
 
 /* ===== Undo modal & toast ===== */
 let lastRemoved = null;
