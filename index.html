@@ -39,10 +39,17 @@
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .col{flex:1;min-width:120px}
   label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px}
-  input,select{
-    width:100%;padding:12px;border-radius:12px;border:1px solid #2a3444;
-    background:var(--btn);color:var(--ink);font-size:14px;outline:none;
-  }
+input,select,textarea{
+    box-sizing:border-box;
+    width:100%;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #2a3444;
+    background:var(--btn);
+    color:var(--ink);
+    font-size:14px;
+    outline:none;
+}
 
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
   .btn{
