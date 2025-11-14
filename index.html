@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.7.2)</title>
+<title>Team Tracker – iPhone (v3.7.3)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -420,7 +420,6 @@
     gap:6px;
     align-items:stretch;
   }
-  
 </style>
 </head>
 <body>
@@ -429,7 +428,7 @@
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.7.2</div>
+      <div class="tag" id="gameMetaTag">New game • v3.7.3</div>
     </div>
   </header>
 
@@ -466,7 +465,7 @@
         </select>
       </div>
     </div>
-    <div class="row date-period-row" style="margin-top:8px;">      
+    <div class="row date-period-row" style="margin-top:8px;">
       <div class="col">
         <label for="date">Date</label>
         <input id="date" type="date">
@@ -703,7 +702,7 @@
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3702'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3703'));
 }
 
 /* ===== IndexedDB KV helper ===== */
@@ -987,6 +986,7 @@ function cancelUndoHold(){
   }
 }
 
+/* Null-safe wiring so a stale DOM can't kill the whole app */
 const undoBtn = $('btnUndo');
 if (undoBtn) {
   undoBtn.addEventListener('pointerdown', startUndoHold);
@@ -994,8 +994,7 @@ if (undoBtn) {
   undoBtn.addEventListener('pointerleave', cancelUndoHold);
   undoBtn.addEventListener('pointercancel', cancelUndoHold);
 } else {
-  // Optional: basic debug breadcrumb if something’s off with the DOM / cache
-  console.warn('btnUndo not found – check cached HTML / service worker.');
+  console.warn('btnUndo not found – check DOM / cache.');
 }
 
 /* ===== Undo modal & toast ===== */
@@ -1566,17 +1565,89 @@ function computeTeamScore(){
     Fin
   };
 }
-function refreshLog(){
-  $('log').innerHTML = state.events.slice(-200)
-    .map(ev=>`<div class="item">P${ev.period} • ${fmtTime(ev.tISO)} — ${labelFor(ev)}</div>`)
-    .join('');
-  $('log').scrollTop = $('log').scrollHeight;
-}
-function renderAll(){
-  highlightPeriod();
-  updateMeta();
-  refreshStats();
-  refreshLog();
+
+/* ===== Live renders & meta ===== */
+function updateMeta(){
+  // Livebar scores & shots
+  const F = state.countsF, A = state.countsA;
+  $('liveGF').textContent = F.goals || 0;
+  $('liveGA').textContent = A.goals || 0;
+  $('liveSF').textContent = F.shots || 0;
+  $('liveSA').textContent = A.shots || 0;
+
+  // Live goalie / team rings
+  const K = computeGoalieScore();
+  const T = computeTeamScore();
+
+  const gsEl = $('gsLive');
+  const tsEl = $('tsLive');
+  const gsRing = $('gsRing');
+  const tsRing = $('tsRing');
+  const gsArc = $('gsArc');
+  const tsArc = $('tsArc');
+
+  const setRing = (valEl, ringEl, arcEl, score)=>{
+    if(!valEl || !ringEl || !arcEl) return;
+    if(state.events.length === 0){
+      valEl.textContent = '—';
+      ringEl.classList.remove('good','warn','badc');
+      arcEl.style.strokeDashoffset = '113px';
+      return;
+    }
+    valEl.textContent = Math.round(score);
+    ringEl.classList.remove('good','warn','badc');
+    if(score >= 85) ringEl.classList.add('good');
+    else if(score >= 70) ringEl.classList.add('warn');
+    else ringEl.classList.add('badc');
+
+    const frac = clamp01(score / 100);
+    const baseLen = 113;
+    arcEl.style.strokeDashoffset = String(baseLen * (1 - frac));
+  };
+
+  setRing(gsEl, gsRing, gsArc, K.total);
+  setRing(tsEl, tsRing, tsArc, T.total);
+
+  // Basic stat cards
+  const saves = Math.max(0, A.shots - A.goals);
+  const sv = A.shots ? (saves / A.shots) : 0;
+  const svTxt = A.shots ? sv.toFixed(3).slice(1) : '—';
+
+  const shootPct = F.shots ? (F.goals / F.shots) : 0;
+  const shootTxt = F.shots ? shootPct.toFixed(3).slice(1) : '—';
+
+  const shotShare = (F.shots + A.shots) ? (F.shots / (F.shots + A.shots)) : 0.5;
+  const shotShareTxt = (F.shots + A.shots)
+    ? `${Math.round(shotShare * 100)}%`
+    : '—';
+
+  $('savesVal').textContent = saves;
+  $('svVal').textContent = svTxt;
+  $('smotherVal').textContent = state.countsA.smothers || 0;
+  $('brVal').textContent = state.countsA.badRebounds || 0;
+  $('bigVal').textContent = state.countsA.bigSaves || 0;
+  $('shootVal').textContent = shootTxt;
+  $('ssVal').textContent = shotShareTxt;
+  $('baVal').textContent = state.team.breakawaysAgainst || 0;
+  $('dzVal').textContent = state.team.dzTurnovers || 0;
+
+  // Period summary chips (shots/goals by period)
+  const pWrap = $('periodSummary');
+  if(pWrap){
+    pWrap.innerHTML = [1,2,3,4].map(p=>{
+      const v = per[p];
+      const title = p===4 ? 'OT' : `P${p}`;
+      const gf = v.F_goals, ga = v.A_goals;
+      const sf = v.F_shots, sa = v.A_shots;
+      return `<div class="pchip">
+        <h4>${title}</h4>
+        <div>GF ${gf} • GA ${ga}</div>
+        <div>SF ${sf} • SA ${sa}</div>
+      </div>`;
+    }).join('');
+  }
+
+  updateDebugLines();
 }
 
 /* ===== Summary builders ===== */
@@ -1655,7 +1726,6 @@ function buildGASummary(){
     const rawSt = ev.strength || 'EV';
     const st = rawSt === 'PP' ? 'PP' : rawSt === 'SH' ? 'SH' : 'EV';
 
-    // Merge BA/DZ/BR into a readable "Cause" cell
     const cause = typeof ev.ga_cause === 'string' ? ev.ga_cause : '';
     const parts = [];
     if (cause.includes('BA') || ev.ga_ba) parts.push('Breakaway');
@@ -2204,7 +2274,7 @@ document.addEventListener('visibilitychange', ()=>{
 setInterval(save, 4000);
 
 /* Init */
-(async function init(){
+(function init(){
   $('date').valueAsDate = new Date();
   try{
     const r = localStorage.getItem(ROSTER_KEY);
@@ -2220,18 +2290,31 @@ setInterval(save, 4000);
   }catch(_){
     state.roster=[];
   }
-  await persistStorage();
-  const loaded = await load();
-  if (loaded && Array.isArray(loaded.events)){
-    Object.assign(state, loaded);
-    state.events = Array.isArray(state.events) ? state.events : [];
-    state.events.sort((a,b)=>new Date(a.tISO) - new Date(b.tISO));
-    rebuildFromEvents();
-    $('resumeBanner').classList.remove('hidden');
-  }
-  updateMeta();
-  renderAll();
+  persistStorage();
+  load().then(loaded=>{
+    if (loaded && Array.isArray(loaded.events)){
+      Object.assign(state, loaded);
+      state.events = Array.isArray(state.events) ? state.events : [];
+      state.events.sort((a,b)=>new Date(a.tISO) - new Date(b.tISO));
+      rebuildFromEvents();
+      $('resumeBanner').classList.remove('hidden');
+    }
+    updateMeta();
+    renderAll();
+  });
 })();
+
+function renderAll(){
+  highlightPeriod();
+  updateMeta();
+  refreshLog();
+}
+function refreshLog(){
+  $('log').innerHTML = state.events.slice(-200)
+    .map(ev=>`<div class="item">P${ev.period} • ${fmtTime(ev.tISO)} — ${labelFor(ev)}</div>`)
+    .join('');
+  $('log').scrollTop = $('log').scrollHeight;
+}
 </script>
 </body>
 </html>
