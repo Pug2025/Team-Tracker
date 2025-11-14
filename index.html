@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.7.3)</title>
+<title>Team Tracker – iPhone (v3.7.4)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -39,17 +39,10 @@
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .col{flex:1;min-width:120px}
   label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px}
-input,select,textarea{
-    box-sizing:border-box;
-    width:100%;
-    padding:12px;
-    border-radius:12px;
-    border:1px solid #2a3444;
-    background:var(--btn);
-    color:var(--ink);
-    font-size:14px;
-    outline:none;
-}
+  input,select{
+    width:100%;padding:12px;border-radius:12px;border:1px solid #2a3444;
+    background:var(--btn);color:var(--ink);font-size:14px;outline:none;
+  }
 
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
   .btn{
@@ -68,33 +61,45 @@ input,select,textarea{
   }
   .btn:active{transform:scale(.98)}
 
-  /* semantic borders – all same base colour */
-  .btn.shot{                /* neutral */
-    border-color:#2a3444;
+  /* semantic button groups */
+  .btn-neg-light{
+    background:#181b24;
+    border-color:rgba(255,159,10,0.7);
   }
-  .btn.big, .btn.smother, .btn.forShot{  /* good */
-    border-color:var(--good);
+  .btn-neg{
+    background:#1a181d;
+    border-color:rgba(255,69,58,0.85);
   }
-  .btn.goal,
-  .btn.bad,
-  .btn.team{                /* bad */
-    border-color:var(--bad);
-  }
-  .btn.soft{                /* very bad */
+  .btn-neg-strong{
+    background:#1f161c;
     border-color:#ff2d55;
+    box-shadow:0 0 0 1px rgba(255,45,85,0.35), 0 6px 12px rgba(0,0,0,.22);
   }
-  .btn#btnForShot,          /* Our Shot = good */
-  .btn#btnForGoal{          /* Our Goal = very good */
+  .btn-pos-goalie{
+    background:#122220;
     border-color:var(--good);
   }
-  .btn#btnForGoal{          /* bump “very good” slightly */
-    box-shadow:0 0 0 1px rgba(53,199,89,.4), 0 6px 12px rgba(0,0,0,.22);
+  .btn-pos-goalie-strong{
+    box-shadow:0 0 0 1px rgba(53,199,89,0.35), 0 6px 12px rgba(0,0,0,.22);
+  }
+  .btn-pos-team{
+    background:#142131;
+    border-color:var(--accent);
+  }
+  .btn-pos-team-strong{
+    box-shadow:0 0 0 1px rgba(77,163,255,0.35), 0 6px 12px rgba(0,0,0,.22);
+  }
+  .btn-context{
+    background:#151c27;
+    border-color:rgba(255,159,10,0.7);
+    box-shadow:0 3px 8px rgba(0,0,0,.18);
   }
 
   /* neutral controls */
   .btn.undo,
   .btn.period{
     border-color:#2a3444;
+    background:#171f2b;
   }
 
   .btn.end{
@@ -108,6 +113,17 @@ input,select,textarea{
     font-size:14px;
   }
   .btn.team:active,.btn.roster:active{transform:scale(.97)}
+
+  .grid-divider{
+    grid-column:1 / -1;
+    border-top:1px solid #233044;
+    margin-top:2px;
+    padding-top:6px;
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
 
   /* Live floating scoreboard */
   .livebar{
@@ -435,7 +451,7 @@ input,select,textarea{
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.7.3</div>
+      <div class="tag" id="gameMetaTag">New game • v3.7.4</div>
     </div>
   </header>
 
@@ -495,21 +511,23 @@ input,select,textarea{
   <section class="panel">
     <div class="grid">
       <!-- Row 1 -->
-      <button class="btn shot" id="btnShot" type="button">Shot (Saved)</button>
-      <button class="btn big" id="btnBigSave" type="button">Big Save</button>
+      <button class="btn btn-neg-light" id="btnShot" type="button">Shot Against</button>
+      <button class="btn btn-pos-team" id="btnForShot" type="button">Shot For</button>
       <!-- Row 2 -->
-      <button class="btn goal" id="btnGoal" type="button">Goal</button>
-      <button class="btn soft" id="btnSoftGoal" type="button">Soft Goal</button>
+      <button class="btn btn-neg" id="btnGoal" type="button">Goal Against</button>
+      <button class="btn btn-pos-team btn-pos-team-strong" id="btnForGoal" type="button">Goal For</button>
       <!-- Row 3 -->
-      <button class="btn smother" id="btnSmother" type="button">Smother</button>
-      <button class="btn bad" id="btnBadRebound" type="button">Bad Rebound</button>
+      <button class="btn btn-neg-strong" id="btnSoftGoal" type="button">Soft Goal</button>
+      <button class="btn btn-pos-goalie" id="btnSmother" type="button">Smother</button>
       <!-- Row 4 -->
-      <button class="btn" id="btnForShot" type="button">Our Shot</button>
-      <button class="btn" id="btnForGoal" type="button">Our Goal</button>
-      <!-- Row 5 (team misc) -->
-      <button class="btn team" id="btnBreakaway" type="button">Breakaway Against</button>
-      <button class="btn team" id="btnDZTurnover" type="button">D-Zone Turnover</button>
-      <!-- Row 6 -->
+      <button class="btn btn-neg" id="btnBadRebound" type="button">Bad Rebound</button>
+      <button class="btn btn-pos-goalie btn-pos-goalie-strong" id="btnBigSave" type="button">Big Save</button>
+      <!-- Divider before team defensive context -->
+      <div class="grid-divider">Team Defensive Context</div>
+      <!-- Row 5 -->
+      <button class="btn btn-context" id="btnBreakaway" type="button">Breakaway Against</button>
+      <button class="btn btn-context" id="btnDZTurnover" type="button">D-Zone Turnover</button>
+      <!-- Row 6: game controls -->
       <button class="btn undo" id="btnUndo" type="button" title="Tap: undo last • Long-press: choose from last 5">Undo</button>
       <button class="btn period" id="btnNextPeriod" type="button">Next Period</button>
     </div>
@@ -709,7 +727,7 @@ input,select,textarea{
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3703'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3704'));
 }
 
 /* ===== IndexedDB KV helper ===== */
