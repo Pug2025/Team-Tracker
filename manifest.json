@@ -1,13 +1,12 @@
 {
-  "name": "Team Tracker – iPhone",
+  "name": "Team Tracker",
   "short_name": "Team Tracker",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Lightweight offline-ready goalie and team performance tracker.",
+  "start_url": ".",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0b0e11",
   "theme_color": "#0b0e11",
-  "description": "Lightweight goalie and team performance tracker for youth hockey.",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
