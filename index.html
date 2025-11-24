@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Team Tracker – iPhone (v3.7.4)</title>
+<title>Team Tracker – iPhone (v3.7.5)</title>
 <style>
   :root{
     --bg:#0b0e11; --panel:#141922; --ink:#e8ecf1; --muted:#9aa6b2; --accent:#4da3ff;
@@ -64,7 +64,7 @@
   /* semantic button groups */
   .btn-neg-light{
     background:#181b24;
-    border-color:rgba(255,159,10,0.7);
+    border-color:var(--accent); /* Shot Against border now blue to match Shot For */
   }
   .btn-neg{
     background:#1a181d;
@@ -89,6 +89,12 @@
   .btn-pos-team-strong{
     box-shadow:0 0 0 1px rgba(77,163,255,0.35), 0 6px 12px rgba(0,0,0,.22);
   }
+  /* Goal For: green border like Smother, with green glow */
+  #btnForGoal{
+    border-color:var(--good);
+    box-shadow:0 0 0 1px rgba(53,199,89,0.35), 0 6px 12px rgba(0,0,0,.22);
+  }
+
   .btn-context{
     background:#151c27;
     border-color:rgba(255,159,10,0.7);
@@ -451,7 +457,7 @@
     <h1>Team Tracker</h1>
     <div class="inlineRow">
       <button class="btn roster" id="btnRoster" type="button" aria-haspopup="dialog" aria-controls="rosterModal">Roster</button>
-      <div class="tag" id="gameMetaTag">New game • v3.7.4</div>
+      <div class="tag" id="gameMetaTag">New game • v3.7.5</div>
     </div>
   </header>
 
@@ -727,7 +733,7 @@
 
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3704'));
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js?v=3705'));
 }
 
 /* ===== IndexedDB KV helper ===== */
